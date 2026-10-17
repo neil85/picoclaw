@@ -1,0 +1,72 @@
+{
+  "version": 3,
+  "agents": {
+    "defaults": {
+      "model_name": "deepseek-v4-pro",
+      "max_tool_iterations": 50,
+      "routing": {
+        "enabled": true,
+        "tiers": [
+          { "model": "glm-5.3-flash",       "max_score": 0.10 },
+          { "model": "deepseek-v4.1-flash", "max_score": 0.15 },
+          { "model": "dola-seed-2.0-lite",  "max_score": 0.25 },
+          { "model": "glm-5.2",             "max_score": 0.40 },
+          { "model": "dola-seed-2.0-code",  "max_score": 0.50 },
+          { "model": "dola-seed-2.0-pro",   "max_score": 0.75 }
+        ]
+      }
+    }
+  },
+  "model_list": [
+    {
+      "model_name": "glm-5.3-flash",
+      "provider": "openai",
+      "model": "glm-5.3-flash",
+      "api_base": "https://ark.ap-southeast.bytepluses.com/api/coding/v3",
+      "api_keys": ["YOUR_ARK_API_KEY"]
+    },
+    {
+      "model_name": "deepseek-v4.1-flash",
+      "provider": "openai",
+      "model": "deepseek-v4.1-flash",
+      "api_base": "https://ark.ap-southeast.bytepluses.com/api/coding/v3",
+      "api_keys": ["YOUR_ARK_API_KEY"]
+    },
+    {
+      "model_name": "dola-seed-2.0-lite",
+      "provider": "openai",
+      "model": "dola-seed-2.0-lite",
+      "api_base": "https://ark.ap-southeast.bytepluses.com/api/coding/v3",
+      "api_keys": ["YOUR_ARK_API_KEY"]
+    },
+    {
+      "model_name": "glm-5.2",
+      "provider": "openai",
+      "model": "glm-5.2",
+      "api_base": "https://ark.ap-southeast.bytepluses.com/api/coding/v3",
+      "api_keys": ["YOUR_ARK_API_KEY"]
+    },
+    {
+      "model_name": "dola-seed-2.0-code",
+      "provider": "openai",
+      "model": "dola-seed-2.0-code",
+      "api_base": "https://ark.ap-southeast.bytepluses.com/api/coding/v3",
+      "api_keys": ["YOUR_ARK_API_KEY"]
+    },
+    {
+      "model_name": "dola-seed-2.0-pro",
+      "provider": "openai",
+      "model": "dola-seed-2.0-pro",
+      "api_base": "https://ark.ap-southeast.bytepluses.com/api/coding/v3",
+      "api_keys": ["YOUR_ARK_API_KEY"]
+    },
+    {
+      "model_name": "deepseek-v4-pro",
+      "provider": "openai",
+      "model": "deepseek-v4-pro",
+      "thinking_level": "high",
+      "api_base": "https://ark.ap-southeast.bytepluses.com/api/coding/v3",
+      "api_keys": ["YOUR_ARK_API_KEY"]
+    }
+  ]
+}

@@ -21,13 +21,8 @@ const (
 	ChannelPicoClient     = "pico_client"
 	ChannelTelegram       = "telegram"
 	ChannelDiscord        = "discord"
-	ChannelFeishu         = "feishu"
-	ChannelWeixin         = "weixin"
-	ChannelWeCom          = "wecom"
-	ChannelDingTalk       = "dingtalk"
 	ChannelSlack          = "slack"
 	ChannelMatrix         = "matrix"
-	ChannelDeltaChat      = "deltachat"
 	ChannelLINE           = "line"
 	ChannelOneBot         = "onebot"
 	ChannelQQ             = "qq"
@@ -39,6 +34,7 @@ const (
 	ChannelTeamsWebHook   = "teams_webhook"
 	ChannelMQTT           = "mqtt"
 	ChannelSlackWebHook   = "slack_webhook"
+	ChannelA2A            = "a2a"
 )
 
 func initChannel() {
@@ -664,13 +660,8 @@ var channelSettingsFactory = map[string]any{
 	ChannelPicoClient:     (PicoClientSettings{}),
 	ChannelTelegram:       (TelegramSettings{}),
 	ChannelDiscord:        (DiscordSettings{}),
-	ChannelFeishu:         (FeishuSettings{}),
-	ChannelWeixin:         (WeixinSettings{}),
-	ChannelWeCom:          (WeComSettings{}),
-	ChannelDingTalk:       (DingTalkSettings{}),
 	ChannelSlack:          (SlackSettings{}),
 	ChannelMatrix:         (MatrixSettings{}),
-	ChannelDeltaChat:      (DeltaChatSettings{}),
 	ChannelLINE:           (LINESettings{}),
 	ChannelOneBot:         (OneBotSettings{}),
 	ChannelQQ:             (QQSettings{}),
@@ -682,6 +673,7 @@ var channelSettingsFactory = map[string]any{
 	ChannelTeamsWebHook:   (TeamsWebhookSettings{}),
 	ChannelMQTT:           (MQTTSettings{}),
 	ChannelSlackWebHook:   (SlackWebhookSettings{}),
+	ChannelA2A:            (A2ASettings{}),
 }
 
 // RegisterChannelSettings registers a settings struct prototype for a custom
@@ -794,8 +786,6 @@ func validateChannelStreamingConfig(channelName string, target any) error {
 	case *PicoSettings:
 		streaming = settings.Streaming
 	case *TelegramSettings:
-		streaming = settings.Streaming
-	case *WeComSettings:
 		streaming = settings.Streaming
 	default:
 		return nil

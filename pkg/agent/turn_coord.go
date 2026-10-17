@@ -186,6 +186,18 @@ func (al *AgentLoop) runTurn(ctx context.Context, ts *turnState, pipeline *Pipel
 			// are not re-injected on subsequent iterations (Issue 2 fix).
 			exec.pendingMessages = nil
 		}
+		// Warn the model before the cap so it can wrap up instead of being cut off mid-task.
+		if remaining := ts.agent.MaxIterations - iteration; ts.agent.MaxIterations >= iterationWarnMinCap &&
+			remaining == iterationWarnRemaining-1 {
+			messages = append(messages, providers.Message{
+				Role: "user",
+				Content: fmt.Sprintf(
+					"[system notice] Only %d tool-use steps remain for this turn. Stop exploring, finish what "+
+						"matters most, and give the user a final summary of what is done and what is left.",
+					iterationWarnRemaining,
+				),
+			})
+		}
 		// Always sync messages into exec.messages so CallLLM sees the updated state
 		exec.messages = messages
 
@@ -291,6 +303,11 @@ func (al *AgentLoop) runTurn(ctx context.Context, ts *turnState, pipeline *Pipel
 	return result, err
 }
 
+const (
+	iterationWarnRemaining = 3 // LLM calls left when the wrap-up notice is injected
+	iterationWarnMinCap    = 8 // no notice for tiny caps
+)
+
 func (al *AgentLoop) abortTurn(ts *turnState) (turnResult, error) {
 	ts.setPhase(TurnPhaseAborted)
 	if !ts.opts.NoHistory {
@@ -313,12 +330,16 @@ func (al *AgentLoop) selectCandidates(
 	agent *AgentInstance,
 	userMsg string,
 	history []providers.Message,
-) (candidates []providers.FallbackCandidate, model string, usedLight bool) {
-	if agent.Router == nil || len(agent.LightCandidates) == 0 {
-		return agent.Candidates, resolvedCandidateModel(agent.Candidates, agent.Model), false
+) (candidates []providers.FallbackCandidate, model string, tier string) {
+	if agent.Router == nil {
+		return agent.Candidates, resolvedCandidateModel(agent.Candidates, agent.Model), ""
 	}
 
-	_, usedLight, score := agent.Router.SelectModel(userMsg, history, agent.Model)
+	tierName, usedLight, score := agent.Router.SelectModel(userMsg, history, agent.Model)
+	tierCands, _ := agent.routedTier(tierName)
+	if usedLight && len(tierCands) == 0 {
+		usedLight = false
+	}
 	if !usedLight {
 		logger.DebugCF("agent", "Model routing: primary model selected",
 			map[string]any{
@@ -326,17 +347,16 @@ func (al *AgentLoop) selectCandidates(
 				"score":     score,
 				"threshold": agent.Router.Threshold(),
 			})
-		return agent.Candidates, resolvedCandidateModel(agent.Candidates, agent.Model), false
+		return agent.Candidates, resolvedCandidateModel(agent.Candidates, agent.Model), ""
 	}
 
 	logger.InfoCF("agent", "Model routing: light model selected",
 		map[string]any{
 			"agent_id":    agent.ID,
-			"light_model": agent.Router.LightModel(),
+			"light_model": tierName,
 			"score":       score,
-			"threshold":   agent.Router.Threshold(),
 		})
-	return agent.LightCandidates, resolvedCandidateModel(agent.LightCandidates, agent.Router.LightModel()), true
+	return tierCands, resolvedCandidateModel(tierCands, tierName), tierName
 }
 
 func (al *AgentLoop) resolveContextManager() ContextManager {
@@ -446,8 +466,8 @@ func (al *AgentLoop) askSideQuestion(
 	}
 	messages = resolveMediaRefs(messages, al.mediaStore, maxMediaSize, currentTurnStart)
 
-	activeCandidates, activeModel, usedLight := al.selectCandidates(agent, question, messages)
-	selectedModelName := sideQuestionModelName(agent, usedLight)
+	activeCandidates, activeModel, tier := al.selectCandidates(agent, question, messages)
+	selectedModelName := sideQuestionModelName(agent, tier)
 
 	llmOpts := map[string]any{
 		"max_tokens":       agent.MaxTokens,

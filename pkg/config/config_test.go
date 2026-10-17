@@ -1019,38 +1019,6 @@ func TestDefaultConfig_ChannelStreamingDisabled(t *testing.T) {
 	}
 }
 
-func TestDefaultConfig_DeltaChatExample(t *testing.T) {
-	cfg := DefaultConfig()
-
-	deltachat := cfg.Channels.Get(ChannelDeltaChat)
-	if deltachat == nil {
-		t.Fatal("DefaultConfig() missing deltachat channel")
-	}
-	if deltachat.Enabled {
-		t.Fatal("DefaultConfig().deltachat should be disabled")
-	}
-	if !deltachat.GroupTrigger.MentionOnly {
-		t.Fatal("DefaultConfig().deltachat should use mention-only group trigger")
-	}
-	decoded, err := deltachat.GetDecoded()
-	if err != nil {
-		t.Fatalf("deltachat GetDecoded() error = %v", err)
-	}
-	settings, ok := decoded.(*DeltaChatSettings)
-	if !ok {
-		t.Fatalf("deltachat settings type = %T, want *DeltaChatSettings", decoded)
-	}
-	if settings.Email != "@nine.testrun.org" {
-		t.Fatalf("DefaultConfig().deltachat.settings.email = %q, want @nine.testrun.org", settings.Email)
-	}
-	if settings.Password.String() != "" {
-		t.Fatal("DefaultConfig().deltachat.settings.password should be empty")
-	}
-	if settings.DisplayName == "" {
-		t.Fatal("DefaultConfig().deltachat.settings.display_name should be populated")
-	}
-}
-
 func TestValidateSingletonChannels_RejectsMultipleInstances(t *testing.T) {
 	channels := ChannelsConfig{
 		"pico1": &Channel{Enabled: true, Type: ChannelPico},
@@ -3242,16 +3210,7 @@ func testChannelsConfigWithTokens() ChannelsConfig {
 			},
 		},
 		{"matrix", MatrixSettings{AccessToken: *NewSecureString("matrix-access-token-abc")}},
-		{
-			"feishu",
-			FeishuSettings{
-				AppSecret:  *NewSecureString("feishu-app-secret-123"),
-				EncryptKey: *NewSecureString("feishu-encrypt-key"),
-			},
-		},
-		{"dingtalk", DingTalkSettings{ClientSecret: *NewSecureString("dingtalk-client-secret")}},
 		{"onebot", OneBotSettings{AccessToken: *NewSecureString("onebot-access-token")}},
-		{"wecom", WeComSettings{Secret: *NewSecureString("wecom-secret")}},
 		{"pico", PicoSettings{Token: *NewSecureString("pico-token-abc123")}},
 		{
 			"irc",

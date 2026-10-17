@@ -620,15 +620,6 @@ picoclaw agent -m "Hello"
       "session_store_path": "",
       "allow_from": []
     },
-    "feishu": {
-      "enabled": false,
-      "type": "feishu",
-      "app_id": "cli_xxx",
-      "app_secret": "xxx",
-      "encrypt_key": "",
-      "verification_token": "",
-      "allow_from": []
-    },
     "qq": {
       "enabled": false,
       "type": "qq",

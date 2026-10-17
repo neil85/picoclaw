@@ -17,18 +17,18 @@ func TestToChannelHashes(t *testing.T) {
 	assert.Equal(t, 0, len(results))
 	logger.Debugf("results: %v", results)
 
-	// Add dingtalk channel via map
+	// Add discord channel via map
 	cfg2 := config.DefaultConfig()
-	cfg2.Channels["dingtalk"] = &config.Channel{
+	cfg2.Channels["discord"] = &config.Channel{
 		Enabled:  true,
-		Type:     config.ChannelDingTalk,
+		Type:     config.ChannelDiscord,
 		Settings: config.RawNode(`{"enabled":true}`),
 	}
 	results2 := toChannelHashes(cfg2)
 	assert.Equal(t, 1, len(results2))
 	logger.Debugf("results2: %v", results2)
 	added, removed := compareChannels(results, results2)
-	assert.EqualValues(t, []string{"dingtalk"}, added)
+	assert.EqualValues(t, []string{"discord"}, added)
 	assert.EqualValues(t, []string(nil), removed)
 
 	// Add telegram channel
@@ -42,7 +42,7 @@ func TestToChannelHashes(t *testing.T) {
 	assert.Equal(t, 1, len(results3))
 	logger.Debugf("results3: %v", results3)
 	added, removed = compareChannels(results2, results3)
-	assert.EqualValues(t, []string{"dingtalk"}, removed)
+	assert.EqualValues(t, []string{"discord"}, removed)
 	assert.EqualValues(t, []string{"telegram"}, added)
 
 	// Modify telegram channel — hash should change

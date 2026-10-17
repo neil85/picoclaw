@@ -236,6 +236,15 @@ Current fields:
 | `enabled` | Turn model routing on or off |
 | `light_model` | `model_name` from `model_list` used for simple turns |
 | `threshold` | Complexity cutoff in `[0, 1]` |
+| `tiers` | Optional model ladder, lightest first: `[{"model": "...", "max_score": 0.3}, ...]`. Replaces `light_model`/`threshold` |
+
+### Multi-tier ladder
+
+With `tiers`, a turn uses the first tier whose `max_score` is above the turn's score. Above the last tier the agent's primary model (`model_name`) is used, so put your strongest model there. Tiers whose model is missing or fails to initialise are skipped with a warning. `picoclaw agent --model <name>` pins one model and bypasses routing.
+
+The scorer is structural (length, code blocks, tool use, depth, attachments), so it cannot tell a hard question from an easy one. Typical scores: greeting `0`, medium prose `0.15`, long prose `0.35`, code block `0.4`, code block plus medium prose `0.55`, code block plus long prose `0.85`.
+
+A ready seven-model BytePlus ModelArk ladder is in [`config/config.modelark.example.json`](../../config/config.modelark.example.json) (`glm-5.3-flash` → `deepseek-v4.1-flash` → `dola-seed-2.0-lite` → `glm-5.2` → `dola-seed-2.0-code` → `dola-seed-2.0-pro` → `deepseek-v4-pro` with `thinking_level: "high"`). It uses `provider: "openai"` with `api_base` `https://ark.ap-southeast.bytepluses.com/api/coding/v3`.
 
 Important behavior:
 

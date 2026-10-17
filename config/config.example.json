@@ -166,34 +166,6 @@
         "session_store_path": ""
       }
     },
-    "feishu": {
-      "enabled": false,
-      "type": "feishu",
-      "allow_from": [],
-      "reasoning_channel_id": "",
-      "placeholder": {
-        "enabled": true,
-        "text": ["Thinking...", "Processing...", "Typing..."]
-      },
-      "settings": {
-        "app_id": "",
-        "app_secret": "",
-        "encrypt_key": "",
-        "verification_token": "",
-        "random_reaction_emoji": [],
-        "is_lark": false
-      }
-    },
-    "dingtalk": {
-      "enabled": false,
-      "type": "dingtalk",
-      "allow_from": [],
-      "reasoning_channel_id": "",
-      "settings": {
-        "client_id": "YOUR_CLIENT_ID",
-        "client_secret": "YOUR_CLIENT_SECRET"
-      }
-    },
     "slack": {
       "enabled": false,
       "type": "slack",
@@ -249,19 +221,6 @@
         "ws_url": "ws://127.0.0.1:3001",
         "access_token": "",
         "reconnect_interval": 5
-      }
-    },
-    "wecom": {
-      "_comment": "WeCom AI Bot over WebSocket.",
-      "enabled": false,
-      "type": "wecom",
-      "allow_from": [],
-      "reasoning_channel_id": "",
-      "settings": {
-        "bot_id": "YOUR_BOT_ID",
-        "secret": "YOUR_SECRET",
-        "websocket_url": "wss://openws.work.weixin.qq.com",
-        "send_thinking_message": true
       }
     },
     "pico": {

@@ -403,6 +403,16 @@ type RoutingConfig struct {
 	Enabled    bool    `json:"enabled"`
 	LightModel string  `json:"light_model"` // model_name from model_list to use for simple tasks
 	Threshold  float64 `json:"threshold"`   // complexity score in [0,1]; score >= threshold → primary model
+	// Tiers is an optional model ladder ordered light → heavy; it replaces
+	// light_model/threshold. A turn uses the first tier with score < max_score;
+	// above the last tier the agent's primary model is used.
+	Tiers []RoutingTier `json:"tiers,omitempty"`
+}
+
+// RoutingTier is one rung of the routing ladder.
+type RoutingTier struct {
+	Model    string  `json:"model"`     // model_name from model_list
+	MaxScore float64 `json:"max_score"` // exclusive upper bound of the complexity score for this tier
 }
 
 // SubTurnConfig configures the SubTurn execution system.
@@ -550,15 +560,6 @@ type TelegramSettings struct {
 	MediaGroupDelayMS int             `json:"media_group_delay_ms" yaml:"-"               env:"PICOCLAW_CHANNELS_TELEGRAM_MEDIA_GROUP_DELAY_MS"`
 }
 
-type FeishuSettings struct {
-	AppID               string              `json:"app_id"                      yaml:"-"                            env:"PICOCLAW_CHANNELS_FEISHU_APP_ID"`
-	AppSecret           SecureString        `json:"app_secret,omitzero"         yaml:"app_secret,omitempty"         env:"PICOCLAW_CHANNELS_FEISHU_APP_SECRET"`
-	EncryptKey          SecureString        `json:"encrypt_key,omitzero"        yaml:"encrypt_key,omitempty"        env:"PICOCLAW_CHANNELS_FEISHU_ENCRYPT_KEY"`
-	VerificationToken   SecureString        `json:"verification_token,omitzero" yaml:"verification_token,omitempty" env:"PICOCLAW_CHANNELS_FEISHU_VERIFICATION_TOKEN"`
-	RandomReactionEmoji FlexibleStringSlice `json:"random_reaction_emoji"       yaml:"-"                            env:"PICOCLAW_CHANNELS_FEISHU_RANDOM_REACTION_EMOJI"`
-	IsLark              bool                `json:"is_lark"                     yaml:"-"                            env:"PICOCLAW_CHANNELS_FEISHU_IS_LARK"`
-}
-
 type DiscordSettings struct {
 	Token       SecureString `json:"token,omitzero" yaml:"token,omitempty" env:"PICOCLAW_CHANNELS_DISCORD_TOKEN"`
 	Proxy       string       `json:"proxy"          yaml:"-"               env:"PICOCLAW_CHANNELS_DISCORD_PROXY"`
@@ -578,11 +579,6 @@ type QQSettings struct {
 	SendMarkdown         bool         `json:"send_markdown"            yaml:"-"                    env:"PICOCLAW_CHANNELS_QQ_SEND_MARKDOWN"`
 }
 
-type DingTalkSettings struct {
-	ClientID     string       `json:"client_id"              yaml:"-"                       env:"PICOCLAW_CHANNELS_DINGTALK_CLIENT_ID"`
-	ClientSecret SecureString `json:"client_secret,omitzero" yaml:"client_secret,omitempty" env:"PICOCLAW_CHANNELS_DINGTALK_CLIENT_SECRET"`
-}
-
 type SlackSettings struct {
 	BotToken SecureString `json:"bot_token,omitzero" yaml:"bot_token,omitempty" env:"PICOCLAW_CHANNELS_SLACK_BOT_TOKEN"`
 	AppToken SecureString `json:"app_token,omitzero" yaml:"app_token,omitempty" env:"PICOCLAW_CHANNELS_SLACK_APP_TOKEN"`
@@ -599,31 +595,6 @@ type MatrixSettings struct {
 	CryptoPassphrase   string       `json:"crypto_passphrase,omitempty"    yaml:"-"`
 }
 
-// DeltaChatSettings configures the Delta Chat channel. Delta Chat is an
-// email-based, end-to-end encrypted messenger; PicoClaw talks to a local
-// `deltachat-rpc-server` process over JSON-RPC (stdio).
-//
-// Email is the only required setting. A full address selects an already
-// configured account in DataDir; a first-run marker such as "@nine.testrun.org"
-// creates a chatmail account and tells the user which full email to save.
-// Mailbox credentials stay in the Delta Chat account store. DisplayName and
-// AvatarImage are optional profile settings applied on startup. Password remains
-// only for legacy PicoClaw-managed email configuration.
-type DeltaChatSettings struct {
-	Email          string       `json:"email"                     yaml:"-"                  env:"PICOCLAW_CHANNELS_DELTACHAT_EMAIL"`
-	Password       SecureString `json:"password,omitzero"         yaml:"password,omitempty" env:"PICOCLAW_CHANNELS_DELTACHAT_PASSWORD"`
-	DisplayName    string       `json:"display_name,omitempty"    yaml:"-"                  env:"PICOCLAW_CHANNELS_DELTACHAT_DISPLAY_NAME"`
-	AvatarImage    string       `json:"avatar_image,omitempty"    yaml:"-"                  env:"PICOCLAW_CHANNELS_DELTACHAT_AVATAR_IMAGE"`
-	DataDir        string       `json:"data_dir,omitempty"        yaml:"-"                  env:"PICOCLAW_CHANNELS_DELTACHAT_DATA_DIR"`
-	RPCServerPath  string       `json:"rpc_server_path,omitempty" yaml:"-"                  env:"PICOCLAW_CHANNELS_DELTACHAT_RPC_SERVER_PATH"`
-	InviteLink     string       `json:"invite_link,omitempty"     yaml:"-"                  env:"PICOCLAW_CHANNELS_DELTACHAT_INVITE_LINK"`
-	AllowCrosspost bool         `json:"allow_crosspost,omitempty" yaml:"-"                  env:"PICOCLAW_CHANNELS_DELTACHAT_ALLOW_CROSSPOST"`
-	IMAPServer     string       `json:"imap_server,omitempty"     yaml:"-"`
-	IMAPPort       int          `json:"imap_port,omitempty"       yaml:"-"`
-	SMTPServer     string       `json:"smtp_server,omitempty"     yaml:"-"`
-	SMTPPort       int          `json:"smtp_port,omitempty"       yaml:"-"`
-}
-
 type LINESettings struct {
 	ChannelSecret      SecureString `json:"channel_secret,omitzero"       yaml:"channel_secret,omitempty"       env:"PICOCLAW_CHANNELS_LINE_CHANNEL_SECRET"`
 	ChannelAccessToken SecureString `json:"channel_access_token,omitzero" yaml:"channel_access_token,omitempty" env:"PICOCLAW_CHANNELS_LINE_CHANNEL_ACCESS_TOKEN"`
@@ -637,35 +608,6 @@ type OneBotSettings struct {
 	AccessToken        SecureString `json:"access_token,omitzero" yaml:"access_token,omitempty" env:"PICOCLAW_CHANNELS_ONEBOT_ACCESS_TOKEN"`
 	ReconnectInterval  int          `json:"reconnect_interval"    yaml:"-"                      env:"PICOCLAW_CHANNELS_ONEBOT_RECONNECT_INTERVAL"`
 	GroupTriggerPrefix []string     `json:"group_trigger_prefix"  yaml:"-"                      env:"PICOCLAW_CHANNELS_ONEBOT_GROUP_TRIGGER_PREFIX"`
-}
-
-type WeComGroupConfig struct {
-	AllowFrom FlexibleStringSlice `json:"allow_from,omitempty"`
-}
-
-type WeComSettings struct {
-	BotID               string          `json:"bot_id"                  yaml:"-"                env:"BOT_ID"`
-	Secret              SecureString    `json:"secret,omitzero"         yaml:"secret,omitempty" env:"SECRET"`
-	WebSocketURL        string          `json:"websocket_url,omitempty" yaml:"-"                env:"WEBSOCKET_URL"`
-	SendThinkingMessage bool            `json:"send_thinking_message"   yaml:"-"                env:"SEND_THINKING_MESSAGE"`
-	Streaming           StreamingConfig `json:"streaming,omitzero"      yaml:"-"`
-}
-
-func (c *WeComSettings) SetSecret(secret string) {
-	c.Secret = *NewSecureString(secret)
-}
-
-type WeixinSettings struct {
-	Token      SecureString `json:"token,omitzero"       yaml:"token,omitempty" env:"PICOCLAW_CHANNELS_WEIXIN_TOKEN"`
-	AccountID  string       `json:"account_id,omitempty" yaml:"-"               env:"PICOCLAW_CHANNELS_WEIXIN_ACCOUNT_ID"`
-	BaseURL    string       `json:"base_url"             yaml:"-"               env:"PICOCLAW_CHANNELS_WEIXIN_BASE_URL"`
-	CDNBaseURL string       `json:"cdn_base_url"         yaml:"-"               env:"PICOCLAW_CHANNELS_WEIXIN_CDN_BASE_URL"`
-	Proxy      string       `json:"proxy"                yaml:"-"               env:"PICOCLAW_CHANNELS_WEIXIN_PROXY"`
-}
-
-// SetToken sets the Weixin token and marks it as dirty for security saving
-func (c *WeixinSettings) SetToken(token string) {
-	c.Token = *NewSecureString(token)
 }
 
 type PicoSettings struct {
@@ -748,6 +690,29 @@ type SlackWebhookTarget struct {
 	WebhookURL SecureString `json:"webhook_url,omitzero" yaml:"webhook_url,omitempty"`
 	Username   string       `json:"username,omitempty"   yaml:"-"`
 	IconEmoji  string       `json:"icon_emoji,omitempty" yaml:"-"`
+}
+
+// A2ASettings configures the minimal Agent2Agent (A2A) server channel.
+// Token is required: remote agents authenticate with "Authorization: Bearer <token>".
+type A2ASettings struct {
+	Token          SecureString `json:"token,omitzero"           yaml:"token,omitempty" env:"PICOCLAW_CHANNELS_A2A_TOKEN"`
+	Name           string       `json:"name,omitempty"           yaml:"-"`
+	Description    string       `json:"description,omitempty"    yaml:"-"`
+	PublicURL      string       `json:"public_url,omitempty"     yaml:"-"`  // advertised in the agent card
+	TimeoutSeconds int          `json:"timeout_seconds,omitempty" yaml:"-"` // max wait for blocking message/send (default 120)
+	MaxInFlight    int          `json:"max_in_flight,omitempty"   yaml:"-"` // concurrent wake-mode tasks before 429 (default 8)
+}
+
+// A2AToolConfig configures the outbound `a2a` tool. The tool is registered only when Peers is non-empty.
+type A2AToolConfig struct {
+	Name  string             `json:"name,omitempty"  yaml:"-"` // how this agent identifies itself to peers (default "picoclaw")
+	Peers map[string]A2APeer `json:"peers,omitempty" yaml:"peers,omitempty"`
+}
+
+// A2APeer is a remote agent reachable over A2A.
+type A2APeer struct {
+	URL   string       `json:"url"             yaml:"-"`
+	Token SecureString `json:"token,omitzero"  yaml:"token,omitempty"`
 }
 
 type HeartbeatConfig struct {
@@ -1141,6 +1106,7 @@ type ToolsConfig struct {
 	Subagent        ToolConfig         `json:"subagent"          yaml:"-"                                                       envPrefix:"PICOCLAW_TOOLS_SUBAGENT_"`
 	WebFetch        ToolConfig         `json:"web_fetch"         yaml:"-"                                                       envPrefix:"PICOCLAW_TOOLS_WEB_FETCH_"`
 	WriteFile       ToolConfig         `json:"write_file"        yaml:"-"                                                       envPrefix:"PICOCLAW_TOOLS_WRITE_FILE_"`
+	A2A             A2AToolConfig      `json:"a2a"               yaml:"a2a,omitempty"`
 }
 
 // IsFilterSensitiveDataEnabled returns true if sensitive data filtering is enabled

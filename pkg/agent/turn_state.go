@@ -137,6 +137,7 @@ type turnExecution struct {
 	response            *providers.LLMResponse
 	normalizedToolCalls []providers.ToolCall
 	allResponsesHandled bool
+	guardDenials        int // consecutive exec calls blocked by the safety guard
 	streamingPublisher  *streamingChunkPublisher
 	streamingFallback   bool
 	suppressReasoning   bool

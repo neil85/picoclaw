@@ -168,30 +168,6 @@ func TestPicoSettings_StreamingConfig(t *testing.T) {
 	assert.Equal(t, 80, picoCfg.Streaming.MinGrowthChars)
 }
 
-func TestWeComSettings_StreamingConfig(t *testing.T) {
-	raw := RawNode(`{
-		"bot_id": "bot-1",
-		"streaming": {
-			"enabled": true,
-			"throttle_seconds": 4,
-			"min_growth_chars": 160
-		}
-	}`)
-	ch := &Channel{
-		Type:     ChannelWeCom,
-		Enabled:  true,
-		Settings: raw,
-	}
-	ch.SetName("wecom")
-	var wecomCfg WeComSettings
-	if err := ch.Decode(&wecomCfg); err != nil {
-		t.Fatalf("Decode() error = %v", err)
-	}
-	assert.True(t, wecomCfg.Streaming.Enabled)
-	assert.Equal(t, 4, wecomCfg.Streaming.ThrottleSeconds)
-	assert.Equal(t, 160, wecomCfg.Streaming.MinGrowthChars)
-}
-
 func TestPicoStreamingConfig_Defaults(t *testing.T) {
 	cfg := StreamingConfig{Enabled: true}
 	got := cfg.WithDefaults(1, 40)
@@ -274,16 +250,6 @@ func TestInitChannelList_RejectsNegativeStreamingDeliveryValues(t *testing.T) {
 			name:        "telegram growth",
 			channelType: ChannelTelegram,
 			settings:    `{"token":"telegram-token","streaming":{"enabled":true,"min_growth_chars":-1}}`,
-		},
-		{
-			name:        "wecom throttle",
-			channelType: ChannelWeCom,
-			settings:    `{"bot_id":"bot-1","streaming":{"enabled":true,"throttle_seconds":-1}}`,
-		},
-		{
-			name:        "wecom growth",
-			channelType: ChannelWeCom,
-			settings:    `{"bot_id":"bot-1","streaming":{"enabled":true,"min_growth_chars":-1}}`,
 		},
 	}
 

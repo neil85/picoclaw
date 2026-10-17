@@ -50,6 +50,10 @@ func hiddenValues(key string, value map[string]any, ch *config.Channel) {
 		if settings, ok := v.(*config.PicoSettings); ok {
 			value["token"] = settings.Token.String()
 		}
+	case "a2a":
+		if settings, ok := v.(*config.A2ASettings); ok {
+			value["token"] = settings.Token.String()
+		}
 	case "telegram":
 		if settings, ok := v.(*config.TelegramSettings); ok {
 			value["token"] = settings.Token.String()
@@ -76,14 +80,6 @@ func hiddenValues(key string, value map[string]any, ch *config.Channel) {
 			value["token"] = settings.ChannelAccessToken.String()
 			value["secret"] = settings.ChannelSecret.String()
 		}
-	case "wecom":
-		if settings, ok := v.(*config.WeComSettings); ok {
-			value["secret"] = settings.Secret.String()
-		}
-	case "dingtalk":
-		if settings, ok := v.(*config.DingTalkSettings); ok {
-			value["secret"] = settings.ClientSecret.String()
-		}
 	case "qq":
 		if settings, ok := v.(*config.QQSettings); ok {
 			value["secret"] = settings.AppSecret.String()
@@ -93,12 +89,6 @@ func hiddenValues(key string, value map[string]any, ch *config.Channel) {
 			value["password"] = settings.Password.String()
 			value["serv_password"] = settings.NickServPassword.String()
 			value["sasl_password"] = settings.SASLPassword.String()
-		}
-	case "feishu":
-		if settings, ok := v.(*config.FeishuSettings); ok {
-			value["app_secret"] = settings.AppSecret.String()
-			value["encrypt_key"] = settings.EncryptKey.String()
-			value["verification_token"] = settings.VerificationToken.String()
 		}
 	case "teams_webhook":
 		// Expose webhook URLs for hash computation (they contain secrets)

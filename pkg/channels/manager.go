@@ -1053,16 +1053,10 @@ func (m *Manager) getChannelConfigAndEnabled(channelName string) (*config.Channe
 		return bc, channelType == config.ChannelWhatsAppNative && settings.UseNative
 	case *config.MatrixSettings:
 		return bc, settings.Homeserver != "" && settings.UserID != "" && settings.AccessToken.String() != ""
-	case *config.WeComSettings:
-		return bc, settings.BotID != "" && settings.Secret.String() != ""
 	case *config.PicoClientSettings:
 		return bc, settings.URL != ""
-	case *config.DingTalkSettings:
-		return bc, settings.ClientID != ""
 	case *config.SlackSettings:
 		return bc, settings.BotToken.String() != ""
-	case *config.WeixinSettings:
-		return bc, settings.Token.String() != ""
 	case *config.PicoSettings:
 		return bc, settings.Token.String() != ""
 	case *config.IRCSettings:
@@ -1075,14 +1069,14 @@ func (m *Manager) getChannelConfigAndEnabled(channelName string) (*config.Channe
 		return bc, settings.AppSecret.String() != ""
 	case *config.TelegramSettings:
 		return bc, settings.Token.String() != ""
-	case *config.FeishuSettings:
-		return bc, settings.AppSecret.String() != ""
 	case *config.MaixCamSettings:
 		return bc, true
 	case *config.TeamsWebhookSettings:
 		return bc, true
 	case *config.SlackWebhookSettings:
 		return bc, true
+	case *config.A2ASettings:
+		return bc, settings.Token.String() != ""
 	case *config.DiscordSettings:
 		return bc, settings.Token.String() != ""
 	case *config.VKSettings:

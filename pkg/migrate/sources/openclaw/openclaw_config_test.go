@@ -272,8 +272,8 @@ func TestConvertToPicoClaw(t *testing.T) {
 		t.Errorf("expected whatsapp bridge URL 'http://localhost:3000', got '%s'", picoCfg.Channels.WhatsApp.BridgeURL)
 	}
 
-	if picoCfg.Channels.Feishu.AppID != "app-id" {
-		t.Errorf("expected feishu app ID 'app-id', got '%s'", picoCfg.Channels.Feishu.AppID)
+	if picoCfg.Channels.Feishu.AppID != "" { // feishu is no longer a supported channel
+		t.Errorf("feishu should be skipped, got app ID %q", picoCfg.Channels.Feishu.AppID)
 	}
 
 	if len(picoCfg.ModelList) != 1 {
@@ -364,11 +364,11 @@ func TestConvertToPicoClawWithQQAndDingTalk(t *testing.T) {
 		t.Errorf("expected qq app ID 'qq-app-id', got '%s'", picoCfg.Channels.QQ.AppID)
 	}
 
-	if !picoCfg.Channels.DingTalk.Enabled {
-		t.Error("dingtalk should be enabled")
+	if picoCfg.Channels.DingTalk.Enabled { // dingtalk is no longer a supported channel
+		t.Error("dingtalk should be skipped")
 	}
-	if picoCfg.Channels.DingTalk.ClientID != "ding-app-id" {
-		t.Errorf("expected dingtalk client ID 'ding-app-id', got '%s'", picoCfg.Channels.DingTalk.ClientID)
+	if picoCfg.Channels.DingTalk.ClientID != "" {
+		t.Errorf("dingtalk should be skipped, got client ID %q", picoCfg.Channels.DingTalk.ClientID)
 	}
 
 	if !picoCfg.Channels.MaixCam.Enabled {

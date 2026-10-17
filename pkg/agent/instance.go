@@ -58,6 +58,10 @@ type AgentInstance struct {
 	// LightProvider is the concrete provider instance for the configured light model.
 	// It is only used when routing selects the light tier for a turn.
 	LightProvider providers.LLMProvider
+	// TierCandidates/TierProviders hold every routing rung (including the light
+	// one) keyed by the tier's model_name.
+	TierCandidates map[string][]providers.FallbackCandidate
+	TierProviders  map[string]providers.LLMProvider
 	// CandidateProviders maps candidate identity keys to per-candidate LLMProvider
 	// instances. Config-index keys preserve duplicate model_list entries while
 	// provider/model keys remain available for callers without a config identity.
@@ -285,38 +289,53 @@ func NewAgentInstance(
 	var router *routing.Router
 	var lightCandidates []providers.FallbackCandidate
 	var lightProvider providers.LLMProvider
-	if rc := defaults.Routing; rc != nil && rc.Enabled && rc.LightModel != "" {
-		resolved := resolveModelCandidates(cfg, defaults.Provider, rc.LightModel, nil)
-		if len(resolved) > 0 {
-			lightModelCfg, err := resolvedCandidateModelConfig(cfg, resolved[0], workspace)
-			if err != nil {
-				logger.WarnCF(
-					"agent",
-					"Routing light model config invalid; routing disabled",
-					map[string]any{
-						"light_model": rc.LightModel,
-						"agent_id":    agentID,
-						"error":       err.Error(),
-					},
-				)
-			} else {
-				lp, _, err := providers.CreateProviderFromConfig(lightModelCfg)
+	tierCandidates := map[string][]providers.FallbackCandidate{}
+	tierProviders := map[string]providers.LLMProvider{}
+	if rc := defaults.Routing; rc != nil && rc.Enabled {
+		// Legacy light_model/threshold is a one-rung ladder.
+		tiers := rc.Tiers
+		if len(tiers) == 0 && rc.LightModel != "" {
+			tiers = []config.RoutingTier{{Model: rc.LightModel, MaxScore: rc.Threshold}}
+		}
+		var ladder []routing.Tier
+		for _, t := range tiers {
+			warn := func(msg string, err error) {
+				fields := map[string]any{"model": t.Model, "agent_id": agentID}
 				if err != nil {
-					logger.WarnCF("agent", "Routing light model provider init failed; routing disabled",
-						map[string]any{"light_model": rc.LightModel, "agent_id": agentID, "error": err.Error()})
-				} else {
-					router = routing.New(routing.RouterConfig{
-						LightModel: rc.LightModel,
-						Threshold:  rc.Threshold,
-					})
-					lightCandidates = resolved
-					lightProvider = lp
-					populateCandidateProvidersFromCandidates(cfg, workspace, resolved, candidateProviders)
+					fields["error"] = err.Error()
 				}
+				logger.WarnCF("agent", "Routing tier skipped: "+msg, fields)
 			}
-		} else {
-			logger.WarnCF("agent", "Routing light model not found; routing disabled",
-				map[string]any{"light_model": rc.LightModel, "agent_id": agentID})
+			resolved := resolveModelCandidates(cfg, defaults.Provider, t.Model, nil)
+			if len(resolved) == 0 {
+				warn("model not found", nil)
+				continue
+			}
+			tierCfg, err := resolvedCandidateModelConfig(cfg, resolved[0], workspace)
+			if err != nil {
+				warn("model config invalid", err)
+				continue
+			}
+			tp, _, err := providers.CreateProviderFromConfig(tierCfg)
+			if err != nil {
+				warn("provider init failed", err)
+				continue
+			}
+			tierCandidates[t.Model] = resolved
+			tierProviders[t.Model] = tp
+			populateCandidateProvidersFromCandidates(cfg, workspace, resolved, candidateProviders)
+			ladder = append(ladder, routing.Tier{Model: t.Model, MaxScore: t.MaxScore})
+		}
+		if len(ladder) > 0 {
+			rcfg := routing.RouterConfig{Threshold: rc.Threshold}
+			if len(rc.Tiers) > 0 {
+				rcfg.Tiers = ladder
+			} else {
+				rcfg.LightModel = ladder[0].Model
+			}
+			router = routing.New(rcfg)
+			lightCandidates = tierCandidates[router.LightModel()]
+			lightProvider = tierProviders[router.LightModel()]
 		}
 	}
 
@@ -348,6 +367,8 @@ func NewAgentInstance(
 		Router:                    router,
 		LightCandidates:           lightCandidates,
 		LightProvider:             lightProvider,
+		TierCandidates:            tierCandidates,
+		TierProviders:             tierProviders,
 		CandidateProviders:        candidateProviders,
 	}
 }
@@ -679,13 +700,42 @@ func mediaTempDirPattern() string {
 	return "^" + regexp.QuoteMeta(filepath.Clean(media.TempDir())) + "(?:" + sep + "|$)"
 }
 
+// routedTier returns the candidates and provider for a routed tier model name.
+// Falls back to the light fields, which tests and older callers set directly.
+func (a *AgentInstance) routedTier(name string) ([]providers.FallbackCandidate, providers.LLMProvider) {
+	if c, ok := a.TierCandidates[name]; ok {
+		return c, a.TierProviders[name]
+	}
+	return a.LightCandidates, a.LightProvider
+}
+
+// allTierCandidates lists the candidates of every routing rung.
+func (a *AgentInstance) allTierCandidates() [][]providers.FallbackCandidate {
+	out := make([][]providers.FallbackCandidate, 0, len(a.TierCandidates)+1)
+	out = append(out, a.LightCandidates)
+	for _, c := range a.TierCandidates {
+		out = append(out, c)
+	}
+	return out
+}
+
+// tierProviderList lists the provider of every routing rung.
+func (a *AgentInstance) tierProviderList() []providers.LLMProvider {
+	out := []providers.LLMProvider{a.LightProvider}
+	for _, p := range a.TierProviders {
+		out = append(out, p)
+	}
+	return out
+}
+
 // Close releases resources held by the agent's providers and session store.
 func (a *AgentInstance) Close() error {
 	modelMu := a.modelStateMutex()
 	modelMu.Lock()
 	defer modelMu.Unlock()
 	providerList := make([]providers.LLMProvider, 0, 2+len(a.CandidateProviders))
-	providerList = append(providerList, a.Provider, a.LightProvider)
+	providerList = append(providerList, a.Provider)
+	providerList = append(providerList, a.tierProviderList()...)
 	for _, provider := range a.CandidateProviders {
 		providerList = append(providerList, provider)
 	}

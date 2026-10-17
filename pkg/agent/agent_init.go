@@ -38,7 +38,9 @@ func NewAgentLoop(
 	for _, agentID := range registry.ListAgentIDs() {
 		if agent, ok := registry.GetAgent(agentID); ok {
 			rl.RegisterCandidates(agent.Candidates)
-			rl.RegisterCandidates(agent.LightCandidates)
+			for _, c := range agent.allTierCandidates() {
+				rl.RegisterCandidates(c)
+			}
 		}
 	}
 	fallbackChain := providers.NewFallbackChain(cooldown, rl)
@@ -125,6 +127,28 @@ func registerSharedTools(
 		agent, ok := registry.GetAgent(agentID)
 		if !ok {
 			continue
+		}
+
+		// Both default to enabled (IsToolEnabled returns true for unknown names).
+		if cfg.Tools.IsToolEnabled("memory") {
+			agent.Tools.Register(tools.NewMemoryTool(agent.Workspace))
+		}
+		if cfg.Tools.IsToolEnabled("todo") {
+			agent.Tools.Register(tools.NewTodoTool(agent.Workspace))
+		}
+		if cfg.Tools.IsToolEnabled("inbox") {
+			agent.Tools.Register(tools.NewInboxTool(agent.Workspace))
+		}
+		if peers := cfg.Tools.A2A.Peers; len(peers) > 0 && cfg.Tools.IsToolEnabled("a2a") {
+			cfgPeers := make(map[string]tools.A2APeer, len(peers))
+			for n, p := range peers {
+				cfgPeers[n] = tools.A2APeer{URL: p.URL, Token: p.Token.String()}
+			}
+			if a2aTool, err := tools.NewA2ATool(cfg.Tools.A2A.Name, cfgPeers); err != nil {
+				logger.ErrorCF("agent", "a2a tool disabled", map[string]any{"error": err.Error()})
+			} else {
+				agent.Tools.Register(a2aTool)
+			}
 		}
 
 		if cfg.Tools.IsToolEnabled("web") {

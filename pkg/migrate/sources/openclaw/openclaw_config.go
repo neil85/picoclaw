@@ -826,7 +826,7 @@ func (c *OpenClawConfig) convertChannels(warnings *[]string) ChannelsConfig {
 		}
 	}
 
-	if c.Channels.Feishu != nil {
+	if c.Channels.Feishu != nil && supportedChannels["feishu"] {
 		enabled := c.Channels.Feishu.Enabled == nil || *c.Channels.Feishu.Enabled
 		channels.Feishu = FeishuConfig{
 			Enabled:   enabled,

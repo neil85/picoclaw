@@ -280,6 +280,12 @@ func (al *AgentLoop) buildCommandsRuntime(
 		}
 		return al.stopActiveTurnForSession(opts.Dispatch.SessionKey)
 	}
+	rt.ResolveApproval = func(senderID string, approved, always bool) string {
+		if opts == nil {
+			return "No pending approval."
+		}
+		return al.approvals.resolve(opts.Dispatch.SessionKey, senderID, approved, always)
+	}
 	if agent != nil && agent.ContextBuilder != nil {
 		rt.ListSkillNames = agent.ContextBuilder.ListSkillNames
 	}
@@ -333,11 +339,9 @@ func (al *AgentLoop) buildCommandsRuntime(
 				nextCandidateProviders,
 				agent.ImageCandidates,
 			)
-			copyInitializedCandidateProviders(
-				agent.CandidateProviders,
-				nextCandidateProviders,
-				agent.LightCandidates,
-			)
+			for _, tier := range agent.allTierCandidates() {
+				copyInitializedCandidateProviders(agent.CandidateProviders, nextCandidateProviders, tier)
+			}
 			inheritPrimaryProviderForCandidates(
 				cfg,
 				agent.Workspace,
@@ -371,8 +375,7 @@ func (al *AgentLoop) buildCommandsRuntime(
 			closeUnreferencedStatefulProviders(
 				previousProviders,
 				nextCandidateProviders,
-				nextProvider,
-				agent.LightProvider,
+				append([]providers.LLMProvider{nextProvider}, agent.tierProviderList()...)...,
 			)
 			return oldModel, nil
 		}

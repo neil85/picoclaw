@@ -557,10 +557,12 @@ func hasMediaRefs(messages []providers.Message) bool {
 	return false
 }
 
-func sideQuestionModelName(agent *AgentInstance, usedLight bool) string {
-	if usedLight && len(agent.LightCandidates) > 0 {
-		if name := resolvedCandidateModelName(agent.LightCandidates, ""); name != "" {
-			return name
+func sideQuestionModelName(agent *AgentInstance, tier string) string {
+	if tier != "" {
+		if cands, _ := agent.routedTier(tier); len(cands) > 0 {
+			if name := resolvedCandidateModelName(cands, ""); name != "" {
+				return name
+			}
 		}
 	}
 	return agent.Model

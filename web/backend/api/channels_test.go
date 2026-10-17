@@ -18,15 +18,15 @@ func TestHandleGetChannelConfig_ReturnsSecretPresenceWithoutLeakingSecrets(t *te
 	if err != nil {
 		t.Fatalf("LoadConfig() error = %v", err)
 	}
-	bc := cfg.Channels[config.ChannelFeishu]
+	bc := cfg.Channels[config.ChannelTelegram]
 	bc.Enabled = true
 	decoded, err := bc.GetDecoded()
 	if err != nil {
 		t.Fatalf("GetDecoded() error = %v", err)
 	}
-	bcfg := decoded.(*config.FeishuSettings)
-	bcfg.AppID = "cli_test_app"
-	bcfg.AppSecret = *config.NewSecureString("feishu-secret-from-security")
+	bcfg := decoded.(*config.TelegramSettings)
+	bcfg.BaseURL = "cli_test_app"
+	bcfg.Token = *config.NewSecureString("telegram-secret-from-security")
 	bc.AllowFrom = config.FlexibleStringSlice{"ou_test_user"}
 	if err := config.SaveConfig(configPath, cfg); err != nil {
 		t.Fatalf("SaveConfig() error = %v", err)
@@ -36,19 +36,19 @@ func TestHandleGetChannelConfig_ReturnsSecretPresenceWithoutLeakingSecrets(t *te
 	mux := http.NewServeMux()
 	h.RegisterRoutes(mux)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/channels/feishu/config", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/channels/telegram/config", nil)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf(
-			"GET /api/channels/feishu/config status = %d, want %d, body=%s",
+			"GET /api/channels/telegram/config status = %d, want %d, body=%s",
 			rec.Code,
 			http.StatusOK,
 			rec.Body.String(),
 		)
 	}
-	if strings.Contains(rec.Body.String(), "feishu-secret-from-security") {
+	if strings.Contains(rec.Body.String(), "telegram-secret-from-security") {
 		t.Fatalf("response leaked secret value: %s", rec.Body.String())
 	}
 
@@ -62,11 +62,11 @@ func TestHandleGetChannelConfig_ReturnsSecretPresenceWithoutLeakingSecrets(t *te
 		t.Fatalf("json.Unmarshal() error = %v", err)
 	}
 
-	if got := resp.ConfigKey; got != "feishu" {
-		t.Fatalf("config_key = %q, want %q", got, "feishu")
+	if got := resp.ConfigKey; got != "telegram" {
+		t.Fatalf("config_key = %q, want %q", got, "telegram")
 	}
-	if got := resp.Config["app_id"]; got != "cli_test_app" {
-		t.Fatalf("config.app_id = %#v, want %q", got, "cli_test_app")
+	if got := resp.Config["base_url"]; got != "cli_test_app" {
+		t.Fatalf("config.base_url = %#v, want %q", got, "cli_test_app")
 	}
 	if got := resp.Config["enabled"]; got != true {
 		t.Fatalf("config.enabled = %#v, want true", got)
@@ -75,11 +75,11 @@ func TestHandleGetChannelConfig_ReturnsSecretPresenceWithoutLeakingSecrets(t *te
 	if !ok || len(allowFrom) != 1 || allowFrom[0] != "ou_test_user" {
 		t.Fatalf("config.allow_from = %#v, want [\"ou_test_user\"]", resp.Config["allow_from"])
 	}
-	if _, exists := resp.Config["app_secret"]; exists {
-		t.Fatalf("config should omit app_secret, got %#v", resp.Config["app_secret"])
+	if _, exists := resp.Config["token"]; exists {
+		t.Fatalf("config should omit token, got %#v", resp.Config["token"])
 	}
-	if len(resp.ConfiguredSecrets) != 1 || resp.ConfiguredSecrets[0] != "app_secret" {
-		t.Fatalf("configured_secrets = %#v, want [\"app_secret\"]", resp.ConfiguredSecrets)
+	if len(resp.ConfiguredSecrets) != 1 || resp.ConfiguredSecrets[0] != "token" {
+		t.Fatalf("configured_secrets = %#v, want [\"token\"]", resp.ConfiguredSecrets)
 	}
 }
 
@@ -108,7 +108,7 @@ func TestHandleGetChannelConfig_ReturnsCommonFieldsWhenSettingsEmpty(t *testing.
 	if err != nil {
 		t.Fatalf("LoadConfig() error = %v", err)
 	}
-	bc := cfg.Channels[config.ChannelFeishu]
+	bc := cfg.Channels[config.ChannelTelegram]
 	bc.Enabled = true
 	bc.AllowFrom = config.FlexibleStringSlice{"ou_common_user"}
 	if err := config.SaveConfig(configPath, cfg); err != nil {
@@ -119,13 +119,13 @@ func TestHandleGetChannelConfig_ReturnsCommonFieldsWhenSettingsEmpty(t *testing.
 	mux := http.NewServeMux()
 	h.RegisterRoutes(mux)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/channels/feishu/config", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/channels/telegram/config", nil)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf(
-			"GET /api/channels/feishu/config status = %d, want %d, body=%s",
+			"GET /api/channels/telegram/config status = %d, want %d, body=%s",
 			rec.Code,
 			http.StatusOK,
 			rec.Body.String(),

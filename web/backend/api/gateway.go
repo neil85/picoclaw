@@ -538,6 +538,9 @@ func computeModelStreamingSignatures(cfg *config.Config) []string {
 			scope: "defaults.routing.light",
 			name:  cfg.Agents.Defaults.Routing.LightModel,
 		})
+		for i, t := range cfg.Agents.Defaults.Routing.Tiers {
+			refs = append(refs, streamingRef{scope: "defaults.routing.tier:" + strconv.Itoa(i), name: t.Model})
+		}
 	}
 	for agentIndex, agent := range cfg.Agents.List {
 		if agent.Model == nil {

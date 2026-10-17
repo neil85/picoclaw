@@ -19,5 +19,7 @@ func BuiltinDefinitions() []Definition {
 		contextCommand(),
 		subagentsCommand(),
 		reloadCommand(),
+		approveCommand(),
+		denyCommand(),
 	}
 }

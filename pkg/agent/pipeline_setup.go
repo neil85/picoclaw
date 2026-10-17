@@ -127,14 +127,15 @@ func (p *Pipeline) SetupTurn(ctx context.Context, ts *turnState) (*turnExecution
 		ts.ingestMessage(ctx, p.al, rootMsg)
 	}
 
-	activeCandidates, activeModel, usedLight := p.al.selectCandidates(ts.agent, ts.userMessage, messages)
+	activeCandidates, activeModel, tier := p.al.selectCandidates(ts.agent, ts.userMessage, messages)
+	usedLight := tier != ""
 	activeProvider := ts.agent.Provider
-	if usedLight && ts.agent.LightProvider != nil {
-		activeProvider = ts.agent.LightProvider
-	}
 	activeModelName := strings.TrimSpace(ts.agent.Model)
 	if usedLight {
-		activeModelName = strings.TrimSpace(sideQuestionModelName(ts.agent, true))
+		if _, tp := ts.agent.routedTier(tier); tp != nil {
+			activeProvider = tp
+		}
+		activeModelName = strings.TrimSpace(sideQuestionModelName(ts.agent, tier))
 	}
 	activeModelName = resolvedCandidateModelName(activeCandidates, activeModelName)
 

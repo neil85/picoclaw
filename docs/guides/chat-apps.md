@@ -4,23 +4,19 @@
 
 ## 💬 Chat Apps
 
-Talk to your picoclaw through Telegram, Discord, WhatsApp, Matrix, QQ, DingTalk, LINE, WeCom, Feishu, Slack, IRC, OneBot, MQTT, MaixCam, or Pico (native protocol)
+Talk to your picoclaw through Telegram, Discord, WhatsApp, Matrix, QQ, LINE, Slack, IRC, OneBot, MQTT, MaixCam, or Pico (native protocol)
 
-> **Note**: Channels that rely on HTTP callbacks share a single Gateway HTTP server (`gateway.host`:`gateway.port`, default `127.0.0.1:18790`). Socket/stream-based channels such as Feishu, DingTalk, and WeCom do not rely on the shared webhook server for inbound delivery.
+> **Note**: Channels that rely on HTTP callbacks share a single Gateway HTTP server (`gateway.host`:`gateway.port`, default `127.0.0.1:18790`). Socket/stream-based channels such as Telegram and Discord do not rely on the shared webhook server for inbound delivery.
 
 | Channel              | Difficulty         | Description                                           | Documentation                                                                                                    |
 | -------------------- | ------------------ | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **Telegram**         | ⭐ Easy            | Recommended, voice-to-text, long polling (no public IP needed) | [Docs](../channels/telegram/README.md)                                                                  |
 | **Discord**          | ⭐ Easy            | Socket Mode, group/DM support, rich bot ecosystem     | [Docs](../channels/discord/README.md)                                                                           |
 | **WhatsApp**         | ⭐ Easy            | Native (QR scan) or Bridge URL                        | [Docs](#whatsapp)                                                                                                |
-| **Weixin**           | ⭐ Easy            | Native QR scan (Tencent iLink API)                    | [Docs](#weixin)                                                                            |
 | **Slack**            | ⭐ Easy            | **Socket Mode** (no public IP needed), enterprise     | [Docs](../channels/slack/README.md)                                                                             |
 | **Matrix**           | ⭐⭐ Medium        | Federated protocol, self-hosting supported            | [Docs](../channels/matrix/README.md)                                                                            |
 | **QQ**               | ⭐⭐ Medium        | Official bot API, Chinese community                   | [Docs](../channels/qq/README.md)                                                                                |
-| **DingTalk**         | ⭐⭐ Medium        | Stream mode (no public IP needed), enterprise         | [Docs](../channels/dingtalk/README.md)                                                                          |
 | **LINE**             | ⭐⭐⭐ Advanced    | HTTPS Webhook required                                | [Docs](../channels/line/README.md)                                                                              |
-| **WeCom (企业微信)** | ⭐⭐⭐ Advanced    | Official AI Bot over WebSocket, streaming + media     | [Docs](../channels/wecom/README.md) |
-| **Feishu (飞书)**    | ⭐⭐⭐ Advanced    | Enterprise collaboration, feature-rich                | [Docs](../channels/feishu/README.md)                                                                            |
 | **IRC**              | ⭐⭐ Medium        | Server + TLS configuration                            | [Docs](#irc)                                                                                                     |
 | **OneBot**           | ⭐⭐ Medium        | NapCat/Go-CQHTTP compatible, community ecosystem      | [Docs](../channels/onebot/README.md)                                                                            |
 | **MQTT**             | ⭐ Easy            | Any MQTT client via broker pub/sub                    | [Docs](../channels/mqtt/README.md)                                                                              |
@@ -187,43 +183,6 @@ If `session_store_path` is empty, the session is stored in `<workspace>/whatsapp
 
 </details>
 
-<a id="weixin"></a>
-<details>
-<summary><b>Weixin</b> (WeChat Personal)</summary>
-
-PicoClaw supports connecting to your personal WeChat account using the official Tencent iLink API.
-
-**1. Login**
-
-Run the interactive QR login flow:
-```bash
-picoclaw auth weixin
-```
-Scan the printed QR code with your WeChat mobile app. On success, the token is saved to your config.
-
-**2. Configure**
-
-(Optional) Update `allow_from` with your WeChat User ID to restrict who can message the bot:
-```json
-{
-  "channel_list": {
-    "weixin": {
-      "enabled": true,
-      "type": "weixin",
-      "token": "YOUR_TOKEN",
-      "allow_from": ["YOUR_USER_ID"]
-    }
-  }
-}
-```
-
-**3. Run**
-```bash
-picoclaw gateway
-```
-
-</details>
-
 <a id="qq"></a>
 <details>
 <summary><b>QQ</b></summary>
@@ -265,41 +224,6 @@ If you prefer to create the bot manually:
 * Copy the **App ID** and **App Secret** from the bot settings
 * Configure as shown above and run `picoclaw gateway`
 
-</details>
-
-<a id="dingtalk"></a>
-<details>
-<summary><b>DingTalk</b></summary>
-
-**1. Create a bot**
-
-* Go to [Open Platform](https://open.dingtalk.com/)
-* Create an internal app
-* Copy Client ID and Client Secret
-
-**2. Configure**
-
-```json
-{
-  "channel_list": {
-    "dingtalk": {
-      "enabled": true,
-      "type": "dingtalk",
-      "client_id": "YOUR_CLIENT_ID",
-      "client_secret": "YOUR_CLIENT_SECRET",
-      "allow_from": []
-    }
-  }
-}
-```
-
-> Set `allow_from` to empty to allow all users, or specify DingTalk user IDs to restrict access.
-
-**3. Run**
-
-```bash
-picoclaw gateway
-```
 </details>
 
 <a id="matrix"></a>
@@ -385,97 +309,6 @@ picoclaw gateway
 ```
 
 > In group chats, the bot responds only when @mentioned. Replies quote the original message.
-
-</details>
-
-<a id="wecom"></a>
-<details>
-<summary><b>WeCom (企业微信)</b></summary>
-
-PicoClaw now exposes WeCom as a single AI Bot channel over WebSocket.
-No public webhook callback URL is required.
-
-See [WeCom Configuration Guide](../channels/wecom/README.md) for the full configuration reference and migration notes.
-
-**Quick Setup - Recommended**
-
-**1. Authenticate**
-
-```bash
-picoclaw auth wecom
-```
-
-This command shows a QR code, waits for approval in WeCom, and writes `bot_id` + `secret` into `channels.wecom`.
-
-**2. Configure manually if needed**
-
-```json
-{
-  "channel_list": {
-    "wecom": {
-      "enabled": true,
-      "type": "wecom",
-      "bot_id": "YOUR_BOT_ID",
-      "secret": "YOUR_SECRET",
-      "websocket_url": "wss://openws.work.weixin.qq.com",
-      "send_thinking_message": true,
-      "allow_from": [],
-      "reasoning_channel_id": ""
-    }
-  }
-}
-```
-
-**3. Run**
-
-```bash
-picoclaw gateway
-```
-
-> Legacy `wecom_app` and `wecom_aibot` entries are replaced by the unified `channels.wecom` config in this branch.
-
-</details>
-
-<a id="feishu"></a>
-<details>
-<summary><b>Feishu (Lark)</b></summary>
-
-PicoClaw connects to Feishu via WebSocket/SDK mode — no public webhook URL or callback server needed.
-
-**1. Create an app**
-
-* Go to [Feishu Open Platform](https://open.feishu.cn/) and create an application
-* In the app settings, enable the **Bot** capability
-* Create a version and publish the app (the app must be published to take effect)
-* Copy the **App ID** (starts with `cli_`) and **App Secret**
-
-**2. Configure**
-
-```json
-{
-  "channel_list": {
-    "feishu": {
-      "enabled": true,
-      "type": "feishu",
-      "app_id": "cli_xxx",
-      "app_secret": "YOUR_APP_SECRET",
-      "allow_from": []
-    }
-  }
-}
-```
-
-Optional fields: `encrypt_key` and `verification_token` for event encryption (recommended for production).
-
-**3. Run and chat**
-
-```bash
-picoclaw gateway
-```
-
-Open Feishu, search for your bot name, and start chatting. You can also add the bot to a group — use `group_trigger.mention_only: true` to only respond when @mentioned.
-
-For full options, see [Feishu Channel Configuration Guide](../channels/feishu/README.md).
 
 </details>
 

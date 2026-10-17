@@ -287,13 +287,13 @@ func TestHandlePatchConfig_SavesChannelListSettingsPatch(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPatch, "/api/config", bytes.NewBufferString(`{
 		"channel_list": {
-			"feishu": {
+			"telegram": {
 				"enabled": true,
 				"allow_from": ["ou_patch_user"],
 				"settings": {
-					"app_id": "cli_patch_app",
-					"app_secret": "patch-secret",
-					"is_lark": true
+					"base_url": "cli_patch_app",
+					"token": "patch-secret",
+					"use_markdown_v2": true
 				}
 			}
 		}
@@ -315,26 +315,26 @@ func TestHandlePatchConfig_SavesChannelListSettingsPatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadConfig() error = %v", err)
 	}
-	bc := cfg.Channels[config.ChannelFeishu]
+	bc := cfg.Channels[config.ChannelTelegram]
 	if !bc.Enabled {
-		t.Fatal("feishu should be enabled after PATCH")
+		t.Fatal("telegram should be enabled after PATCH")
 	}
 	if len(bc.AllowFrom) != 1 || bc.AllowFrom[0] != "ou_patch_user" {
-		t.Fatalf("feishu allow_from = %#v, want [\"ou_patch_user\"]", bc.AllowFrom)
+		t.Fatalf("telegram allow_from = %#v, want [\"ou_patch_user\"]", bc.AllowFrom)
 	}
 	decoded, err := bc.GetDecoded()
 	if err != nil {
 		t.Fatalf("GetDecoded() error = %v", err)
 	}
-	feishuCfg := decoded.(*config.FeishuSettings)
-	if got := feishuCfg.AppID; got != "cli_patch_app" {
-		t.Fatalf("feishu app_id = %q, want %q", got, "cli_patch_app")
+	tgCfg := decoded.(*config.TelegramSettings)
+	if got := tgCfg.BaseURL; got != "cli_patch_app" {
+		t.Fatalf("telegram base_url = %q, want %q", got, "cli_patch_app")
 	}
-	if got := feishuCfg.AppSecret.String(); got != "patch-secret" {
-		t.Fatalf("feishu app_secret = %q, want %q", got, "patch-secret")
+	if got := tgCfg.Token.String(); got != "patch-secret" {
+		t.Fatalf("telegram token = %q, want %q", got, "patch-secret")
 	}
-	if !feishuCfg.IsLark {
-		t.Fatal("feishu is_lark should be true after PATCH")
+	if !tgCfg.UseMarkdownV2 {
+		t.Fatal("telegram use_markdown_v2 should be true after PATCH")
 	}
 }
 
@@ -623,16 +623,16 @@ func TestHandlePatchConfig_ClearingAllowFromDoesNotLeaveEmptyStringItem(t *testi
 	if err != nil {
 		t.Fatalf("LoadConfig() error = %v", err)
 	}
-	feishuChannel := cfg.Channels[config.ChannelFeishu]
-	feishuChannel.Enabled = true
-	feishuChannel.AllowFrom = config.FlexibleStringSlice{"ou_existing_user"}
-	decoded, err := feishuChannel.GetDecoded()
+	tgChannel := cfg.Channels[config.ChannelTelegram]
+	tgChannel.Enabled = true
+	tgChannel.AllowFrom = config.FlexibleStringSlice{"ou_existing_user"}
+	decoded, err := tgChannel.GetDecoded()
 	if err != nil {
 		t.Fatalf("GetDecoded() error = %v", err)
 	}
-	feishuCfg := decoded.(*config.FeishuSettings)
-	feishuCfg.AppID = "cli_existing_app"
-	feishuCfg.AppSecret = *config.NewSecureString("existing-secret")
+	tgCfg := decoded.(*config.TelegramSettings)
+	tgCfg.BaseURL = "cli_existing_app"
+	tgCfg.Token = *config.NewSecureString("existing-secret")
 	if err = config.SaveConfig(configPath, cfg); err != nil {
 		t.Fatalf("SaveConfig() error = %v", err)
 	}
@@ -643,11 +643,11 @@ func TestHandlePatchConfig_ClearingAllowFromDoesNotLeaveEmptyStringItem(t *testi
 
 	req := httptest.NewRequest(http.MethodPatch, "/api/config", bytes.NewBufferString(`{
 		"channel_list": {
-			"feishu": {
+			"telegram": {
 				"enabled": true,
 				"allow_from": "",
 				"settings": {
-					"app_id": "cli_existing_app"
+					"base_url": "cli_existing_app"
 				}
 			}
 		}
@@ -669,9 +669,9 @@ func TestHandlePatchConfig_ClearingAllowFromDoesNotLeaveEmptyStringItem(t *testi
 	if err != nil {
 		t.Fatalf("LoadConfig() error = %v", err)
 	}
-	feishuChannel = cfg.Channels[config.ChannelFeishu]
-	if len(feishuChannel.AllowFrom) != 0 {
-		t.Fatalf("feishu allow_from = %#v, want empty slice", feishuChannel.AllowFrom)
+	tgChannel = cfg.Channels[config.ChannelTelegram]
+	if len(tgChannel.AllowFrom) != 0 {
+		t.Fatalf("telegram allow_from = %#v, want empty slice", tgChannel.AllowFrom)
 	}
 
 	configData, err := os.ReadFile(configPath)

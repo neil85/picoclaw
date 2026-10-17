@@ -199,7 +199,8 @@ func RunToolLoop(
 
 		// Append results in original order
 		for _, r := range results {
-			contentForLLM := r.result.ContentForLLM()
+			// No workspace here: subagent results get head+tail compaction only.
+			contentForLLM := SpillLargeOutput("", r.tc.Name, r.tc.ID, r.result.ContentForLLM())
 
 			toolMsg := providers.Message{
 				Role:       "tool",

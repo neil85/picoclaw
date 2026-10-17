@@ -15,9 +15,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/sipeed/picoclaw/pkg/config"
+	"github.com/sipeed/picoclaw/pkg/inbox"
 	"github.com/sipeed/picoclaw/pkg/logger"
 	"github.com/sipeed/picoclaw/pkg/providers"
 	"github.com/sipeed/picoclaw/pkg/skills"
+	"github.com/sipeed/picoclaw/pkg/tools"
 	"github.com/sipeed/picoclaw/pkg/utils"
 )
 
@@ -320,6 +322,34 @@ func (cb *ContextBuilder) buildSystemPromptParts(opts systemPromptBuildOptions) 
 		})
 	}
 
+	// Shared todo list: open cross-session tasks (cache invalidated via the file's mtime).
+	if todos := tools.RenderSharedTodos(cb.workspace); todos != "" {
+		add(PromptPart{
+			ID:      "context.todo_shared",
+			Layer:   PromptLayerContext,
+			Slot:    PromptSlotMemory,
+			Source:  PromptSource{ID: PromptSourceMemory, Name: "todo:workspace"},
+			Title:   "shared tasks",
+			Content: todos,
+			Stable:  true,
+			Cache:   PromptCacheEphemeral,
+		})
+	}
+
+	// Inbox: pending messages from other agents (cache invalidated via the inbox dir mtime).
+	if box := inbox.Render(cb.workspace); box != "" {
+		add(PromptPart{
+			ID:      "context.inbox",
+			Layer:   PromptLayerContext,
+			Slot:    PromptSlotMemory,
+			Source:  PromptSource{ID: PromptSourceMemory, Name: "inbox:workspace"},
+			Title:   "inbox",
+			Content: box,
+			Stable:  true,
+			Cache:   PromptCacheEphemeral,
+		})
+	}
+
 	// Multi-Message Sending (if enabled)
 	if cb.splitOnMarker {
 		add(PromptPart{
@@ -538,7 +568,8 @@ func (cb *ContextBuilder) InvalidateCache() {
 func (cb *ContextBuilder) sourcePaths() []string {
 	agentDefinition := cb.LoadAgentDefinition()
 	paths := agentDefinition.trackedPaths(cb.workspace)
-	paths = append(paths, filepath.Join(cb.workspace, "memory", "MEMORY.md"))
+	paths = append(paths, filepath.Join(cb.workspace, "memory", "MEMORY.md"), inbox.Dir(cb.workspace),
+		tools.SharedTodoPath(cb.workspace))
 	return uniquePaths(paths)
 }
 

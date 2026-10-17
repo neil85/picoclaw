@@ -60,6 +60,7 @@ type AgentLoop struct {
 	steering       *steeringQueue
 	pendingSkills  sync.Map
 	pendingStops   sync.Map
+	approvals      approvalBroker
 	mu             sync.RWMutex
 
 	// workerSem limits concurrent turn processing workers.
@@ -190,6 +191,9 @@ func (al *AgentLoop) Run(ctx context.Context) error {
 			}
 			if _, loaded := al.activeTurnStates.LoadOrStore(sessionKey, placeholder); loaded {
 				if al.tryHandleStopCommand(ctx, msg, sessionKey) {
+					continue
+				}
+				if al.tryHandleApprovalCommand(ctx, msg, sessionKey) {
 					continue
 				}
 
@@ -442,7 +446,9 @@ func (al *AgentLoop) ReloadProviderAndConfig(
 	for _, agentID := range registry.ListAgentIDs() {
 		if agent, ok := registry.GetAgent(agentID); ok {
 			newRL.RegisterCandidates(agent.Candidates)
-			newRL.RegisterCandidates(agent.LightCandidates)
+			for _, c := range agent.allTierCandidates() {
+				newRL.RegisterCandidates(c)
+			}
 		}
 	}
 	al.fallback = providers.NewFallbackChain(providers.NewCooldownTracker(), newRL)

@@ -37,6 +37,7 @@ func agentCmd(message, sessionKey, model string, debug bool) error {
 
 	if model != "" {
 		cfg.Agents.Defaults.ModelName = model
+		cfg.Agents.Defaults.Routing = nil // an explicit --model must not be rerouted to another tier
 	}
 
 	provider, modelID, err := providers.CreateProvider(cfg)

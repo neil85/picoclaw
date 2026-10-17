@@ -388,22 +388,6 @@ func validateConfig(cfg *config.Config) []string {
 		}
 	}
 
-	{
-		bc := cfg.Channels.GetByType(config.ChannelWeCom)
-		if bc != nil && bc.Enabled {
-			if decoded, err := bc.GetDecoded(); err == nil && decoded != nil {
-				if c, ok := decoded.(*config.WeComSettings); ok {
-					if c.BotID == "" {
-						errs = append(errs, "channels.wecom.bot_id is required when wecom channel is enabled")
-					}
-					if c.Secret.String() == "" {
-						errs = append(errs, "channels.wecom.secret is required when wecom channel is enabled")
-					}
-				}
-			}
-		}
-	}
-
 	if cfg.Tools.Exec.Enabled {
 		if cfg.Tools.Exec.EnableDenyPatterns {
 			errs = append(

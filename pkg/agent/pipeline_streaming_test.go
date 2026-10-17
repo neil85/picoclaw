@@ -296,15 +296,6 @@ func TestConfiguredStreamingEligibilityGates(t *testing.T) {
 			wantStreamCalls:   1,
 		},
 		{
-			name:              "wecom channel and model enabled streams",
-			channel:           "wecom",
-			channelStreaming:  true,
-			modelStreaming:    true,
-			streamingProvider: true,
-			streamDelegate:    true,
-			wantStreamCalls:   1,
-		},
-		{
 			name:              "channel disabled uses chat",
 			channel:           "pico",
 			modelStreaming:    true,
@@ -1075,8 +1066,7 @@ func newConfiguredStreamingTestConfig(
 			},
 		},
 		Channels: config.ChannelsConfig{
-			"pico":  newConfiguredStreamingPicoChannel(t, channelStreaming),
-			"wecom": newConfiguredStreamingWeComChannel(t, channelStreaming),
+			"pico": newConfiguredStreamingPicoChannel(t, channelStreaming),
 		},
 		ModelList: []*config.ModelConfig{{
 			ModelName: "test-model",
@@ -1097,27 +1087,6 @@ func newConfiguredStreamingTestConfig(
 		t.Fatalf("InitChannelList() error = %v", err)
 	}
 	return cfg
-}
-
-func newConfiguredStreamingWeComChannel(t *testing.T, enabled bool) *config.Channel {
-	t.Helper()
-	settings := config.WeComSettings{
-		BotID: "bot-1",
-		Streaming: config.StreamingConfig{
-			Enabled:         enabled,
-			ThrottleSeconds: 1,
-			MinGrowthChars:  40,
-		},
-	}
-	raw, err := json.Marshal(settings)
-	if err != nil {
-		t.Fatalf("Marshal settings error = %v", err)
-	}
-	return &config.Channel{
-		Type:     config.ChannelWeCom,
-		Enabled:  true,
-		Settings: config.RawNode(raw),
-	}
 }
 
 func newConfiguredStreamingPicoChannel(t *testing.T, enabled bool) *config.Channel {

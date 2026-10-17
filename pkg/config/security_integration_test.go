@@ -217,16 +217,8 @@ func TestAllSecurityKeysAccessible(t *testing.T) {
     "telegram": {
       "enabled": true
     },
-    "feishu": {
-      "enabled": true,
-      "app_id": "test_app_id"
-    },
     "discord": {
       "enabled": true
-    },
-    "dingtalk": {
-      "enabled": true,
-      "client_id": "test_client_id"
     },
     "slack": {
       "enabled": true
@@ -245,10 +237,6 @@ func TestAllSecurityKeysAccessible(t *testing.T) {
     "onebot": {
       "enabled": true,
       "ws_url": "ws://localhost:8080"
-    },
-    "wecom": {
-      "enabled": true,
-      "bot_id": "test_wecom_bot_id"
     },
     "pico": {
       "enabled": true
@@ -299,14 +287,8 @@ func TestAllSecurityKeysAccessible(t *testing.T) {
 channels:
   telegram:
     token: "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
-  feishu:
-    app_secret: "feishu_test_app_secret"
-    encrypt_key: "feishu_test_encrypt_key"
-    verification_token: "feishu_test_verification_token"
   discord:
     token: "discord_test_bot_token_xyz"
-  dingtalk:
-    client_secret: "dingtalk_test_client_secret"
   slack:
     bot_token: "xoxb-slack-bot-token-123"
     app_token: "xapp-slack-app-token-456"
@@ -317,8 +299,6 @@ channels:
     channel_access_token: "line_test_channel_access_token"
   onebot:
     access_token: "onebot_test_access_token"
-  wecom:
-    secret: "wecom_test_secret"
   pico:
     token: "pico_test_token"
   irc:
@@ -387,24 +367,10 @@ skills:
 		assert.Equal(t, "123456789:ABCdefGHIjklMNOpqrsTUVwxyz", secureStr(tgSec.(*TelegramSettings).Token))
 		t.Logf("Telegram Token(): %s", secureStr(tgSec.(*TelegramSettings).Token))
 
-		// Feishu
-		feiSec := decodeChannel("feishu")
-		assert.Equal(t, "feishu_test_app_secret", secureStr(feiSec.(*FeishuSettings).AppSecret))
-		assert.Equal(t, "feishu_test_encrypt_key", secureStr(feiSec.(*FeishuSettings).EncryptKey))
-		assert.Equal(t, "feishu_test_verification_token", secureStr(feiSec.(*FeishuSettings).VerificationToken))
-		t.Logf("Feishu AppSecret(): %s", secureStr(feiSec.(*FeishuSettings).AppSecret))
-		t.Logf("Feishu EncryptKey(): %s", secureStr(feiSec.(*FeishuSettings).EncryptKey))
-		t.Logf("Feishu VerificationToken(): %s", secureStr(feiSec.(*FeishuSettings).VerificationToken))
-
 		// Discord
 		discSec := decodeChannel("discord")
 		assert.Equal(t, "discord_test_bot_token_xyz", secureStr(discSec.(*DiscordSettings).Token))
 		t.Logf("Discord Token(): %s", secureStr(discSec.(*DiscordSettings).Token))
-
-		// DingTalk
-		dtSec := decodeChannel("dingtalk")
-		assert.Equal(t, "dingtalk_test_client_secret", secureStr(dtSec.(*DingTalkSettings).ClientSecret))
-		t.Logf("DingTalk ClientSecret(): %s", secureStr(dtSec.(*DingTalkSettings).ClientSecret))
 
 		// Slack
 		slSec := decodeChannel("slack")
@@ -429,13 +395,6 @@ skills:
 		obSec := decodeChannel("onebot")
 		assert.Equal(t, "onebot_test_access_token", secureStr(obSec.(*OneBotSettings).AccessToken))
 		t.Logf("OneBot AccessToken(): %s", secureStr(obSec.(*OneBotSettings).AccessToken))
-
-		// WeCom
-		wcSec := decodeChannel("wecom")
-		assert.Equal(t, "test_wecom_bot_id", wcSec.(*WeComSettings).BotID)
-		assert.Equal(t, "wecom_test_secret", secureStr(wcSec.(*WeComSettings).Secret))
-		t.Logf("WeCom BotID: %s", wcSec.(*WeComSettings).BotID)
-		t.Logf("WeCom Secret(): %s", secureStr(wcSec.(*WeComSettings).Secret))
 
 		// Pico
 		picoSec := decodeChannel("pico")

@@ -20,6 +20,9 @@ import (
 	"github.com/sipeed/picoclaw/pkg/utils"
 )
 
+// maxConsecutiveGuardDenials is how many blocked exec calls in a row trigger a "stop retrying" nudge.
+const maxConsecutiveGuardDenials = 3
+
 func toolErrorSummary(result *tools.ToolResult) string {
 	if result == nil || !result.IsError {
 		return ""
@@ -304,6 +307,7 @@ toolLoop:
 						}
 						toolResultMedia = append(toolResultMedia, hookResult.Media...)
 					}
+					contentForLLM = tools.SpillLargeOutput(ts.agent.Workspace, toolName, tc.ID, contentForLLM)
 					toolResultMsg := toolResultPromptMessage(contentForLLM, tc.ID, toolResultMedia)
 
 					al.emitEvent(
@@ -525,6 +529,7 @@ toolLoop:
 			}
 
 			content = al.cfg.FilterSensitiveData(content)
+			content = tools.SpillLargeOutput(ts.agent.Workspace, asyncToolName, toolCallID, content)
 
 			logger.InfoCF("agent", "Async tool completed, publishing result",
 				map[string]any{
@@ -688,6 +693,22 @@ toolLoop:
 
 		if al.cfg.Tools.IsFilterSensitiveDataEnabled() {
 			contentForLLM = al.cfg.FilterSensitiveData(contentForLLM)
+		}
+
+		contentForLLM = tools.SpillLargeOutput(ts.agent.Workspace, toolName, toolCallID, contentForLLM)
+
+		// Repeated guard denials make the model burn iterations on variants; tell it to stop.
+		if toolName == "exec" {
+			if strings.HasPrefix(contentForLLM, "Command blocked by") {
+				exec.guardDenials++
+				if exec.guardDenials >= maxConsecutiveGuardDenials {
+					contentForLLM += "\n\nThis is the " + fmt.Sprint(exec.guardDenials) +
+						"th consecutive blocked command. Stop trying variants: tell the user what is blocked " +
+						"and ask how to proceed."
+				}
+			} else {
+				exec.guardDenials = 0
+			}
 		}
 
 		var toolResultMedia []string

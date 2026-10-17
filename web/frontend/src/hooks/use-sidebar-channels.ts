@@ -1,13 +1,11 @@
 import {
   IconBrandChrome,
-  IconBrandDingtalk,
   IconBrandDiscord,
   IconBrandLine,
   IconBrandMatrix,
   IconBrandQq,
   IconBrandSlack,
   IconBrandTelegram,
-  IconBrandWechat,
   IconBrandWhatsapp,
   IconCamera,
   IconMessages,
@@ -31,8 +29,6 @@ const DEFAULT_VISIBLE_CHANNELS = 4
 const CHANNEL_IMPORTANCE_TAIL = [
   "slack",
   "line",
-  "wecom",
-  "dingtalk",
   "qq",
   "onebot",
   "matrix",
@@ -43,25 +39,11 @@ const CHANNEL_IMPORTANCE_TAIL = [
   "whatsapp_native",
 ]
 
-function getChannelImportanceOrder(language: string): string[] {
-  const priority = language.startsWith("zh")
-    ? ["feishu", "weixin", "discord", "telegram"]
-    : ["discord", "telegram", "feishu", "weixin"]
-  return [...priority, ...CHANNEL_IMPORTANCE_TAIL]
-}
-
-function IconLark({ className }: { className?: string }) {
-  return React.createElement("span", {
-    className,
-    "aria-hidden": "true",
-    style: {
-      display: "inline-block",
-      backgroundColor: "currentColor",
-      mask: "url(/lark.svg) center / contain no-repeat",
-      WebkitMask: "url(/lark.svg) center / contain no-repeat",
-    } as React.CSSProperties,
-  })
-}
+const CHANNEL_IMPORTANCE_ORDER = [
+  "discord",
+  "telegram",
+  ...CHANNEL_IMPORTANCE_TAIL,
+]
 
 const CHANNEL_ICON_MAP: Record<
   string,
@@ -70,12 +52,8 @@ const CHANNEL_ICON_MAP: Record<
   telegram: IconBrandTelegram,
   discord: IconBrandDiscord,
   slack: IconBrandSlack,
-  feishu: IconLark,
-  dingtalk: IconBrandDingtalk,
   line: IconBrandLine,
   qq: IconBrandQq,
-  weixin: IconBrandWechat,
-  wecom: IconBrandWechat,
   whatsapp: IconBrandWhatsapp,
   whatsapp_native: IconBrandWhatsapp,
   matrix: IconBrandMatrix,
@@ -132,11 +110,10 @@ export interface SidebarChannelNavItem {
 }
 
 interface UseSidebarChannelsOptions {
-  language: string
   t: TFunction
 }
 
-export function useSidebarChannels({ language, t }: UseSidebarChannelsOptions) {
+export function useSidebarChannels({ t }: UseSidebarChannelsOptions) {
   const gateway = useAtomValue(gatewayAtom)
   const [channels, setChannels] = React.useState<SupportedChannel[]>([])
   const [enabledMap, setEnabledMap] = React.useState<Record<string, boolean>>(
@@ -182,11 +159,10 @@ export function useSidebarChannels({ language, t }: UseSidebarChannelsOptions) {
     previousGatewayStatusRef.current = gateway.status
   }, [gateway.status, reloadChannels])
 
-  const channelImportanceIndex = React.useMemo(() => {
-    return new Map(
-      getChannelImportanceOrder(language).map((name, index) => [name, index]),
-    )
-  }, [language])
+  const channelImportanceIndex = React.useMemo(
+    () => new Map(CHANNEL_IMPORTANCE_ORDER.map((name, index) => [name, index])),
+    [],
+  )
 
   const sortedChannels = React.useMemo(() => {
     const list = [...channels]

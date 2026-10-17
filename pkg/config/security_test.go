@@ -112,7 +112,6 @@ func TestSaveAndLoadSecurityConfig(t *testing.T) {
 			}
 			for _, d := range []def{
 				{"telegram", `{"enabled":true,"settings":{"token":"telegram_token"}}`},
-				{"feishu", `{"enabled":true,"settings":{"app_id":"feishu_app_id","app_secret":"feishu_app_secret"}}`},
 				{"discord", `{"enabled":true,"settings":{"token":"discord_token"}}`},
 				{"qq", `{"enabled":true,"settings":{"app_secret":"qq_app_secret"}}`},
 				{"pico_client", `{"enabled":true,"settings":{"token":"pico_client_token"}}`},
@@ -127,8 +126,6 @@ func TestSaveAndLoadSecurityConfig(t *testing.T) {
 					bc.Decode(&TelegramSettings{})
 				case "discord":
 					bc.Decode(&DiscordSettings{})
-				case "feishu":
-					bc.Decode(&FeishuSettings{})
 				case "pico_client":
 					bc.Decode(&PicoClientSettings{})
 				}
@@ -182,7 +179,6 @@ func TestSaveAndLoadSecurityConfig(t *testing.T) {
 			return channels[name]["settings"].(map[string]any)
 		}
 		assert.Contains(t, getSetting("telegram")["token"], "telegram_token")
-		assert.Contains(t, getSetting("feishu")["app_secret"], "feishu_app_secret")
 		assert.Contains(t, getSetting("discord")["token"], "discord_token")
 		assert.Contains(t, getSetting("qq")["app_secret"], "qq_app_secret")
 		assert.Contains(t, getSetting("pico_client")["token"], "pico_client_token")
@@ -191,8 +187,6 @@ func TestSaveAndLoadSecurityConfig(t *testing.T) {
 		yamlOutput := `channel_list:
   telegram:
     token: telegram_token
-  feishu:
-    app_secret: feishu_app_secret
   discord:
     token: discord_token
   qq:

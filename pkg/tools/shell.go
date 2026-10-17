@@ -36,6 +36,13 @@ func getSessionManager() *SessionManager {
 	return globalSessionManager
 }
 
+// execCaptureHead/Tail bound how much of each stream (stdout, stderr) a synchronous
+// command keeps in memory; the middle of anything larger is dropped.
+const (
+	execCaptureHead = 128 << 10
+	execCaptureTail = 128 << 10
+)
+
 type ExecTool struct {
 	workingDir          string
 	timeout             time.Duration
@@ -406,9 +413,10 @@ func (t *ExecTool) runSync(ctx context.Context, command, cwd string) *ToolResult
 
 	prepareCommandForTermination(cmd)
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	// Bounded capture (head + tail) so a runaway command cannot exhaust memory.
+	stdout, stderr := newHeadTailBuffer(execCaptureHead, execCaptureTail), newHeadTailBuffer(execCaptureHead, execCaptureTail)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	// Route shell execution through the shared isolation entry point so exec tool
 	// subprocesses receive the same isolation policy as other integrations.
@@ -455,7 +463,7 @@ func (t *ExecTool) runSync(ctx context.Context, command, cwd string) *ToolResult
 		if errors.Is(cmdCtx.Err(), context.DeadlineExceeded) {
 			msg := fmt.Sprintf("Command timed out after %v", t.timeout)
 			if output != "" {
-				msg += "\n\nPartial output before timeout:\n" + output
+				msg += "\n\nPartial output before timeout:\n" + SpillLargeOutput(t.workingDir, "exec", randID(), output)
 			}
 			return &ToolResult{
 				ForLLM:  msg,
@@ -484,10 +492,9 @@ func (t *ExecTool) runSync(ctx context.Context, command, cwd string) *ToolResult
 		output = "(no output)"
 	}
 
-	maxLen := 10000
-	if len(output) > maxLen {
-		output = output[:maxLen] + fmt.Sprintf("\n... (truncated, %d more chars)", len(output)-maxLen)
-	}
+	// Keeps head + tail (so the exit code and final errors survive) and saves the full text.
+	// ForUser stays equal to ForLLM so chat channels are not flooded either.
+	output = SpillLargeOutput(t.workingDir, "exec", randID(), output)
 
 	if err != nil {
 		return &ToolResult{
@@ -1153,12 +1160,22 @@ func (t *ExecTool) guardCommand(command, cwd string) string {
 	cmd := strings.TrimSpace(command)
 	lower := strings.ToLower(cmd)
 
+	// Hardline rules apply even when deny patterns are disabled.
+	if reason := HardlineReason(cmd); reason != "" {
+		return "Command blocked by hardline safety rule (" + reason + ")"
+	}
+
 	// Deny patterns always apply, even when a command matches a custom allow rule.
 	// Custom allow rules can permit a command, but must not disable secret-safety
 	// deny rules such as jq env access checks (#3079).
 	for _, pattern := range t.denyPatterns {
 		if pattern.MatchString(lower) {
-			return "Command blocked by safety guard (dangerous pattern detected)"
+			return fmt.Sprintf(
+				"Command blocked by safety guard (dangerous pattern detected: %q). "+
+					"Do not retry variants of it; split it into simpler commands without substitutions or "+
+					"privileged operations, or tell the user what is needed.",
+				pattern.FindString(lower),
+			)
 		}
 	}
 

@@ -21,16 +21,12 @@ export const SECRET_FIELD_MAP = {
 } as const
 
 const CHANNEL_SECRET_FIELDS: Record<string, string[]> = {
-  weixin: ["token"],
   telegram: ["token"],
   discord: ["token"],
   slack: ["bot_token", "app_token"],
-  feishu: ["app_secret", "encrypt_key", "verification_token"],
-  dingtalk: ["client_secret"],
   line: ["channel_secret", "channel_access_token"],
   qq: ["app_secret"],
   onebot: ["access_token"],
-  wecom: ["secret"],
   pico: ["token"],
   matrix: ["access_token"],
   irc: ["password", "nickserv_password", "sasl_password"],

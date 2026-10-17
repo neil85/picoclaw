@@ -64,4 +64,7 @@ type Runtime struct {
 	ClearHistory       func() error
 	ReloadConfig       func() error
 	StopActiveTurn     func() (StopResult, error)
+	// ResolveApproval answers the oldest pending tool-approval prompt of the
+	// current session and returns the reply text.
+	ResolveApproval func(senderID string, approved, always bool) string
 }

@@ -20,9 +20,7 @@ var asrCapableChannels = map[string]bool{
 	"telegram": true,
 	"matrix":   true,
 	"qq":       true,
-	"weixin":   true,
 	"line":     true,
-	"feishu":   true,
 	"onebot":   true,
 }
 

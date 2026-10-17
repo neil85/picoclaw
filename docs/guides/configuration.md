@@ -1166,6 +1166,84 @@ Scheduled tasks persist across restarts and are stored in `~/.picoclaw/workspace
 
 Command cron jobs can execute shell commands. By default, remote channels cannot schedule command jobs. To allow specific remote channels, set `command_allowed_remotes` to entries such as `"telegram"` or `"telegram:1234567890"`; use `"*"` only if every non-empty channel should be allowed. The `"*"` wildcard is potentially dangerous because any remote channel that can talk to PicoClaw can schedule shell commands. This does not bypass `allow_command`, `command_confirm`, or exec safety checks.
 
+### Tool Approval over Chat
+
+Ask the user in the originating chat before risky tools run. The agent posts the request and waits for `/approve`, `/approve always` (remembers that exact command for the session) or `/deny`. Only the user who triggered the turn can answer; no reply within `timeout_seconds` denies.
+
+```json
+{
+  "hooks": {
+    "enabled": true,
+    "builtins": {
+      "channel_approval": {
+        "enabled": true,
+        "config": {
+          "tools": ["exec"],
+          "allow_patterns": ["^(ls|cat|git status)\\b"],
+          "timeout_seconds": 120
+        }
+      }
+    }
+  }
+}
+```
+
+`tools` defaults to `["exec"]`. `allow_patterns` are regexes on the `exec` command that skip the prompt. Turns with no chat to ask (cron, one-shot CLI) are denied.
+
+### Large Tool Output
+
+Tool results over 10 KB are not put into the model's context whole. The model sees the first ~3.5 KB and last ~3 KB (errors and exit codes are usually at the end) plus a note, and the full text is saved to `workspace/tool_output/<time>-<tool>-<call>.txt` (secrets already filtered, files older than 3 days pruned, capped at 8 MiB). The model is told to read or grep that file instead of re-running the command. `read_file` is exempt because it pages its own output. `exec` also keeps at most 128 KB of head and 128 KB of tail per stream in memory, so a runaway command cannot exhaust RAM. The limits are constants in `pkg/tools/spill.go`.
+
+### Agent-to-Agent (A2A) and Inbox
+
+A minimal [A2A](https://a2a-protocol.org) server channel lets other agents send work or leave notes. It mounts on the gateway at `/a2a/` and requires a bearer token (the channel does not start without one).
+
+```json
+{
+  "channels": {
+    "a2a": {
+      "enabled": true,
+      "type": "a2a",
+      "allow_from": ["a2a:agent-zero"],
+      "settings": { "token": "LONG_RANDOM_TOKEN", "name": "jarvis", "public_url": "https://host/a2a/" }
+    }
+  }
+}
+```
+
+- Agent card: `GET /a2a/agent.json` (no auth). Calls: `POST /a2a/` with `Authorization: Bearer <token>`, JSON-RPC `message/send` and `tasks/get`.
+- `metadata.mode: "inbox"` (cheap completion callback): no LLM call; the text is saved to `workspace/inbox/` and appears under `# Inbox` in the agent's prompt on its next turn. The agent reads and archives items with the `inbox` tool (`read`, `ack`). Max 50 pending items of 8 KB; archived items move to `inbox/done/`.
+- `metadata.mode: "wake"` (default): runs a turn in an isolated session per `contextId`; the reply is the task's artifact. Set `configuration.blocking: true` to wait (up to `timeout_seconds`, default 120). The first reply completes the task.
+- `metadata.from` labels the sender (used for `allow_from` as `a2a:<from>` and shown to the model). It is self-declared; the token is the real credential, so give each peer its own channel entry if you need to tell them apart.
+- Peer text is untrusted: it is labelled as coming from another agent, and tools such as `exec` still go through hardline blocks and approval.
+- Not implemented: streaming, push notifications, `tasks/cancel`, file parts, and the `/.well-known/agent-card.json` location.
+
+**Calling other agents (client side).** List peers under `tools.a2a` and the model gets an `a2a` tool (`send`, `get`, `list`). It works against any A2A server with bearer auth, including another PicoClaw running the channel above. The tool is not registered when `peers` is empty.
+
+```json
+{
+  "tools": {
+    "a2a": {
+      "name": "jarvis",
+      "peers": { "zero": { "url": "http://agent-zero.local:18790/a2a/", "token": "ZERO_TOKEN" } }
+    }
+  }
+}
+```
+
+- The model only chooses a peer *name*; URLs and tokens come from config (no model-controlled URLs, redirects are not followed).
+- `mode: "wake"` (default) waits for the peer's reply (`wait: false` returns a `task_id` for `get`); `mode: "inbox"` leaves a note without starting a turn.
+- Peer replies are returned marked as untrusted data. While a turn is answering a peer (channel `a2a`) only `mode: "inbox"` is allowed, so two agents cannot ping-pong forever.
+- Pair it with the shared todo list: track a delegated job as `status: "waiting"` and let the peer's inbox callback close it.
+
+**Shared todo list.** `todo` with `shared: true` keeps one list across all sessions and channels (`workspace/todos/shared.json`). Items are upserted by `id`, several may be `in_progress`, and `waiting` marks work blocked on someone else. Open items (up to 15) appear in the system prompt every turn; the last 5 closed items are kept, older ones are dropped.
+
+Example callback from a worker agent when it finishes:
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" -d '{"jsonrpc":"2.0","id":1,"method":"message/send","params":{"message":{"parts":[{"kind":"text","text":"SBC research done: /work/result.md"}]},"metadata":{"mode":"inbox","from":"agent-zero"}}}' http://localhost:18790/a2a/
+```
+
 ### Advanced Topics
 
 | Topic | Description |

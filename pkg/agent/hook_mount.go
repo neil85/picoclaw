@@ -142,12 +142,18 @@ func (al *AgentLoop) loadConfiguredHooks(ctx context.Context) (err error) {
 	builtinNames := enabledBuiltinHookNames(al.cfg.Hooks.Builtins)
 	for _, name := range builtinNames {
 		spec := al.cfg.Hooks.Builtins[name]
-		factory, ok := lookupBuiltinHook(name)
-		if !ok {
-			return fmt.Errorf("builtin hook %q is not registered", name)
+		var hook any
+		var factoryErr error
+		if name == channelApprovalHookName {
+			// Needs the AgentLoop (bus + approval broker), so it bypasses the registry.
+			hook, factoryErr = al.newChannelApprovalHook(spec)
+		} else {
+			factory, ok := lookupBuiltinHook(name)
+			if !ok {
+				return fmt.Errorf("builtin hook %q is not registered", name)
+			}
+			hook, factoryErr = factory(ctx, spec)
 		}
-
-		hook, factoryErr := factory(ctx, spec)
 		if factoryErr != nil {
 			return fmt.Errorf("build builtin hook %q: %w", name, factoryErr)
 		}

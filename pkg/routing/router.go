@@ -1,6 +1,8 @@
 package routing
 
 import (
+	"sort"
+
 	"github.com/sipeed/picoclaw/pkg/providers"
 )
 
@@ -20,6 +22,17 @@ type RouterConfig struct {
 	// score >= Threshold → primary (heavy) model.
 	// score <  Threshold → light model.
 	Threshold float64
+
+	// Tiers is an optional ladder of models ordered light → heavy. A turn goes to
+	// the first tier whose MaxScore is greater than its score; above the last tier
+	// the primary model is used. When empty, LightModel+Threshold form one tier.
+	Tiers []Tier
+}
+
+// Tier is one rung of the model ladder.
+type Tier struct {
+	Model    string
+	MaxScore float64 // exclusive upper bound: score < MaxScore selects this tier
 }
 
 // Router selects the appropriate model tier for each incoming message.
@@ -32,13 +45,7 @@ type Router struct {
 // New creates a Router with the given config and the default RuleClassifier.
 // If cfg.Threshold is zero or negative, defaultThreshold (0.35) is used.
 func New(cfg RouterConfig) *Router {
-	if cfg.Threshold <= 0 {
-		cfg.Threshold = defaultThreshold
-	}
-	return &Router{
-		cfg:        cfg,
-		classifier: &RuleClassifier{},
-	}
+	return newWithClassifier(cfg, &RuleClassifier{})
 }
 
 // newWithClassifier creates a Router with a custom Classifier.
@@ -46,6 +53,13 @@ func New(cfg RouterConfig) *Router {
 func newWithClassifier(cfg RouterConfig, c Classifier) *Router {
 	if cfg.Threshold <= 0 {
 		cfg.Threshold = defaultThreshold
+	}
+	if len(cfg.Tiers) == 0 {
+		cfg.Tiers = []Tier{{Model: cfg.LightModel, MaxScore: cfg.Threshold}}
+	} else {
+		cfg.Tiers = append([]Tier(nil), cfg.Tiers...)
+		sort.SliceStable(cfg.Tiers, func(i, j int) bool { return cfg.Tiers[i].MaxScore < cfg.Tiers[j].MaxScore })
+		cfg.LightModel = cfg.Tiers[0].Model
 	}
 	return &Router{cfg: cfg, classifier: c}
 }
@@ -65,10 +79,17 @@ func (r *Router) SelectModel(
 ) (model string, usedLight bool, score float64) {
 	features := ExtractFeatures(msg, history)
 	score = r.classifier.Score(features)
-	if score < r.cfg.Threshold {
-		return r.cfg.LightModel, true, score
+	for _, t := range r.cfg.Tiers {
+		if score < t.MaxScore {
+			return t.Model, true, score
+		}
 	}
 	return primaryModel, false, score
+}
+
+// Tiers returns the ladder, lightest first.
+func (r *Router) Tiers() []Tier {
+	return r.cfg.Tiers
 }
 
 // LightModel returns the configured light model name.

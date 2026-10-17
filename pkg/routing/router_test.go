@@ -412,3 +412,28 @@ func TestRouter_SelectModel_ReturnsScore(t *testing.T) {
 		t.Errorf("score: got %f, want 0.42", score)
 	}
 }
+
+func TestRouter_Tiers_LadderPicksFirstTierAboveScore(t *testing.T) {
+	cfg := RouterConfig{Tiers: []Tier{ // deliberately unsorted: New must order them
+		{Model: "mid", MaxScore: 0.4},
+		{Model: "light", MaxScore: 0.1},
+		{Model: "upper", MaxScore: 0.75},
+	}}
+	for _, tc := range []struct {
+		score     float64
+		want      string
+		usedLight bool
+	}{
+		{0, "light", true}, {0.1, "mid", true}, {0.39, "mid", true},
+		{0.4, "upper", true}, {0.74, "upper", true}, {0.75, "primary", false}, {1, "primary", false},
+	} {
+		r := newWithClassifier(cfg, &fixedScoreClassifier{score: tc.score})
+		got, usedLight, _ := r.SelectModel("x", nil, "primary")
+		if got != tc.want || usedLight != tc.usedLight {
+			t.Errorf("score %v: got (%s,%v), want (%s,%v)", tc.score, got, usedLight, tc.want, tc.usedLight)
+		}
+	}
+	if r := New(cfg); r.LightModel() != "light" {
+		t.Errorf("LightModel() = %q, want lightest tier", r.LightModel())
+	}
+}

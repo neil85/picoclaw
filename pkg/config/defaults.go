@@ -531,7 +531,6 @@ func defaultChannels() ChannelsConfig {
 				"media_group_delay_ms": 500,
 			},
 		},
-		"feishu":  map[string]any{},
 		"discord": map[string]any{},
 		"maixcam": map[string]any{
 			"settings": map[string]any{"host": "0.0.0.0", "port": 18790},
@@ -539,21 +538,13 @@ func defaultChannels() ChannelsConfig {
 		"qq": map[string]any{
 			"settings": map[string]any{"max_message_length": 2000},
 		},
-		"dingtalk": map[string]any{},
-		"slack":    map[string]any{},
+		"slack": map[string]any{},
 		"matrix": map[string]any{
 			"group_trigger": map[string]any{"mention_only": true},
 			"placeholder":   map[string]any{"enabled": true, "text": []string{"Thinking... 💭"}},
 			"settings": map[string]any{
 				"homeserver":     "https://matrix.org",
 				"join_on_invite": true,
-			},
-		},
-		"deltachat": map[string]any{
-			"group_trigger": map[string]any{"mention_only": true},
-			"settings": map[string]any{
-				"email":        "@nine.testrun.org",
-				"display_name": "PicoClaw Bot",
 			},
 		},
 		"line": map[string]any{
@@ -568,18 +559,6 @@ func defaultChannels() ChannelsConfig {
 			"settings": map[string]any{
 				"ws_url":             "ws://127.0.0.1:3001",
 				"reconnect_interval": 5,
-			},
-		},
-		"wecom": map[string]any{
-			"settings": map[string]any{
-				"websocket_url":         "wss://openws.work.weixin.qq.com",
-				"send_thinking_message": true,
-			},
-		},
-		"weixin": map[string]any{
-			"settings": map[string]any{
-				"base_url":     "https://ilinkai.weixin.qq.com/",
-				"cdn_base_url": "https://novac2c.cdn.weixin.qq.com/c2c",
 			},
 		},
 		"pico": map[string]any{
